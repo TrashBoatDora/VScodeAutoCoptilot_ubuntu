@@ -82,3 +82,10 @@ __pycache__/
 *.pyo
 *.pyd
 
+# Projects (ignore contents but keep folder)
+projects/*
+!projects/.gitkeep
+
+# Prompts (ignore contents but keep folder)
+prompts/*
+!prompts/.gitkeep

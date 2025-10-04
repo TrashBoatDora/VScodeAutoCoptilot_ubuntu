@@ -54,7 +54,6 @@ coverage.xml
 .vscode/
 
 # Logs
-logs/
 *.log
 
 # OS generated files
@@ -83,10 +82,3 @@ __pycache__/
 *.pyo
 *.pyd
 
-# projects
-projects/*
-!prompts/.gitkeep
-
-# prompts  
-prompts/*
-!prompts/.gitkeep

@@ -35,7 +35,9 @@ class AutomationLogger:
         """
         self.name = name
         self.logger = logging.getLogger(name)
-        self.logger.setLevel(getattr(logging, config.LOG_LEVEL))
+        # 確保日誌級別正確設定
+        log_level = getattr(logging, config.LOG_LEVEL, logging.INFO)
+        self.logger.setLevel(log_level)
         
         # 清除已存在的處理器，避免重複
         self.logger.handlers.clear()
@@ -60,7 +62,7 @@ class AutomationLogger:
         
         # 設定控制台處理器
         console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(getattr(logging, config.LOG_LEVEL))
+        console_handler.setLevel(log_level)
         console_handler.setFormatter(formatter)
         self.logger.addHandler(console_handler)
         
@@ -184,7 +186,19 @@ class ProjectLogger:
         # 在 ExecutionResult/AutomationLog 資料夾下創建專用日誌檔案
         script_root = Path(__file__).parent.parent  # 腳本根目錄
         automation_log_dir = script_root / "ExecutionResult" / "AutomationLog"
-        automation_log_dir.mkdir(parents=True, exist_ok=True)
+        
+        # 確保目錄存在
+        try:
+            automation_log_dir.mkdir(parents=True, exist_ok=True)
+            # 檢查目錄是否可寫
+            test_file = automation_log_dir / ".test_write"
+            test_file.touch()
+            test_file.unlink()
+        except Exception as e:
+            self.main_logger.warning(f"無法創建或寫入 ExecutionResult/AutomationLog 目錄: {e}，將使用主日誌目錄")
+            # 回退到主日誌目錄
+            automation_log_dir = script_root / "logs"
+            automation_log_dir.mkdir(parents=True, exist_ok=True)
 
         timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
         project_log_file = automation_log_dir / f"{project_name}_automation_log_{timestamp}.txt"

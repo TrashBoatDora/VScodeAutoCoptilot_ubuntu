@@ -42,7 +42,105 @@ class CopilotHandler:
         self.error_handler = error_handler  # 添加 error_handler 引用
         self.image_recognition = image_recognition  # 添加圖像識別引用
         self.interaction_settings = interaction_settings  # 添加外部設定支援
+        self._clipboard_lock = False  # 剪貼簿鎖定狀態，避免併發衝突
         self.logger.info("Copilot Chat 處理器初始化完成")
+    
+    def _send_prompt_with_content(self, prompt_content: str, line_number: int, total_lines: int) -> bool:
+        """
+        發送提示詞內容到 Copilot Chat（支援串接內容）
+        
+        Args:
+            prompt_content: 完整的提示詞內容（可能包含串接的回應）
+            line_number: 行號（1開始）
+            total_lines: 總行數
+            
+        Returns:
+            bool: 發送是否成功
+        """
+        try:
+            self.logger.info(f"發送第 {line_number}/{total_lines} 行提示詞...")
+            
+            # 截斷過長的內容用於日誌顯示
+            display_content = prompt_content[:100] + "..." if len(prompt_content) > 100 else prompt_content
+            self.logger.debug(f"內容預覽: {display_content}")
+            self.logger.debug(f"完整內容長度: {len(prompt_content)} 字元")
+            
+            # 使用安全的剪貼簿複製
+            if not self._safe_clipboard_copy(prompt_content, f"第 {line_number} 行完整提示詞"):
+                self.logger.error(f"無法複製第 {line_number} 行完整提示詞到剪貼簿")
+                return False
+            
+            # 確保聚焦到輸入框（輕量級檢查）
+            pyautogui.hotkey('ctrl', 'f1')
+            time.sleep(0.5)
+            
+            # 清空現有內容並貼上提示詞
+            pyautogui.hotkey('ctrl', 'a')  # 全選
+            time.sleep(0.2)
+            pyautogui.hotkey('ctrl', 'v')  # 貼上
+            time.sleep(0.5)
+            
+            # 發送提示詞
+            pyautogui.press('enter')
+            time.sleep(1)
+            
+            self.logger.copilot_interaction(f"發送第 {line_number} 行", "SUCCESS", f"長度: {len(prompt_content)} 字元")
+            return True
+            
+        except Exception as e:
+            self.logger.copilot_interaction(f"發送第 {line_number} 行", "ERROR", str(e))
+            return False
+    
+    def _safe_clipboard_copy(self, content: str, context: str = "") -> bool:
+        """
+        安全的剪貼簿複製操作，避免併發衝突
+        
+        Args:
+            content: 要複製的內容
+            context: 操作上下文（用於日誌）
+            
+        Returns:
+            bool: 複製是否成功
+        """
+        max_attempts = 3
+        wait_time = 0.8
+        
+        for attempt in range(max_attempts):
+            try:
+                # 避免併發操作
+                while self._clipboard_lock:
+                    self.logger.debug("等待剪貼簿解鎖...")
+                    time.sleep(0.2)
+                
+                self._clipboard_lock = True
+                
+                # 執行複製
+                pyperclip.copy(content)
+                time.sleep(wait_time)
+                
+                # 驗證複製結果
+                copied_content = pyperclip.paste()
+                
+                self._clipboard_lock = False
+                
+                if copied_content == content:
+                    self.logger.debug(f"剪貼簿複製成功 - {context} (第 {attempt + 1} 次)")
+                    return True
+                else:
+                    self.logger.warning(f"剪貼簿內容不符 - {context} (第 {attempt + 1} 次)")
+                    if attempt < max_attempts - 1:
+                        time.sleep(1)
+                        continue
+                        
+            except Exception as e:
+                self._clipboard_lock = False
+                self.logger.warning(f"剪貼簿操作異常 - {context}: {e}")
+                if attempt < max_attempts - 1:
+                    time.sleep(1)
+                    continue
+        
+        self.logger.error(f"剪貼簿複製失敗 - {context}")
+        return False
     
     def open_copilot_chat(self) -> bool:
         """
@@ -91,9 +189,10 @@ class CopilotHandler:
             self.logger.info("發送提示詞到 Copilot Chat...")
             self.logger.debug(f"提示詞內容: {prompt[:100]}...")
             
-            # 將提示詞複製到剪貼簿
-            pyperclip.copy(prompt)
-            time.sleep(0.5)
+            # 使用安全的剪貼簿複製
+            if not self._safe_clipboard_copy(prompt, "主提示詞"):
+                self.logger.error("無法複製主提示詞到剪貼簿")
+                return False
             
             # 使用 Ctrl+F1 聚焦到輸入框
             pyautogui.hotkey('ctrl', 'f1')
@@ -179,9 +278,10 @@ class CopilotHandler:
             self.logger.info(f"發送第 {line_number}/{total_lines} 行提示詞...")
             self.logger.debug(f"內容: {prompt_line[:100]}...")
             
-            # 將提示詞複製到剪貼簿
-            pyperclip.copy(prompt_line)
-            time.sleep(0.5)
+            # 使用安全的剪貼簿複製
+            if not self._safe_clipboard_copy(prompt_line, f"第 {line_number} 行提示詞"):
+                self.logger.error(f"無法複製第 {line_number} 行提示詞到剪貼簿")
+                return False
             
             # 確保聚焦到輸入框（輕量級檢查）
             pyautogui.hotkey('ctrl', 'f1')
@@ -332,9 +432,8 @@ class CopilotHandler:
             try:
                 self.logger.info(f"複製 Copilot 回應 (第 {attempt + 1}/{config.COPILOT_COPY_RETRY_MAX} 次)...")
                 
-                # 清空剪貼簿
-                pyperclip.copy("")
-                time.sleep(0.5)
+                # 使用安全的剪貼簿清空
+                self._safe_clipboard_copy("", "清空剪貼簿")
                 
                 # 使用鍵盤操作複製回應
                 # 1. Ctrl+F1 聚焦到 Copilot Chat 輸入框
@@ -456,22 +555,27 @@ class CopilotHandler:
             project_subdir = result_subdir / project_name
             project_subdir.mkdir(parents=True, exist_ok=True)
             
-            # 生成檔名（包含時間戳記、輪數和行號，用於反覆互動的版本控制）
-            timestamp = time.strftime('%Y%m%d_%H%M%S')  # 增加秒數確保唯一性
+            # 建立輪數專屬資料夾
             round_number = kwargs.get('round_number', 1)
+            round_subdir = project_subdir / f"第{round_number}輪"
+            round_subdir.mkdir(parents=True, exist_ok=True)
+            
+            # 生成檔名（包含時間戳記和行號，用於反覆互動的版本控制）
+            timestamp = time.strftime('%Y%m%d_%H%M%S')  # 增加秒數確保唯一性
             line_number = kwargs.get('line_number', None)  # 新增：行號參數
             
             if line_number is not None:
                 # 專案專用提示詞模式：按行記錄
-                output_file = project_subdir / f"{timestamp}_第{round_number}輪_第{line_number}行.md"
+                output_file = round_subdir / f"{timestamp}_第{line_number}行.md"
             else:
                 # 全域提示詞模式：按輪記錄
-                output_file = project_subdir / f"{timestamp}_第{round_number}輪.md"
+                output_file = round_subdir / f"{timestamp}_回應.md"
             
             self.logger.info(f"儲存回應到: {output_file}")
             
             # 創建檔案並寫入內容  
             prompt_text = kwargs.get('prompt_text', "使用預設提示詞")
+            actual_sent_prompt = kwargs.get('actual_sent_prompt', None)  # 實際發送的完整內容
             
             with open(output_file, 'w', encoding='utf-8') as f:
                 f.write("# Copilot 自動補全記錄\n")
@@ -488,13 +592,20 @@ class CopilotHandler:
                 f.write(f"# 執行狀態: {'成功' if is_success else '失敗'}\n")
                 f.write("=" * 50 + "\n\n")
                 
-                # 添加使用的提示詞
+                # 添加原始提示詞
                 if line_number is not None:
-                    f.write(f"## 第 {line_number} 行提示詞\n\n")
+                    f.write(f"## 第 {line_number} 行原始提示詞\n\n")
                 else:
-                    f.write("## 本輪提示詞\n\n")
+                    f.write("## 本輪原始提示詞\n\n")
                 f.write(prompt_text)
                 f.write("\n\n")
+                
+                # 如果有實際發送的內容（串接後），也記錄下來
+                if actual_sent_prompt and actual_sent_prompt != prompt_text:
+                    f.write("## 實際發送內容（包含串接）\n\n")
+                    f.write(actual_sent_prompt)
+                    f.write("\n\n")
+                    f.write(f"**注意**: 本次發送包含了前面回應的串接內容，總長度: {len(actual_sent_prompt)} 字元\n\n")
                 
                 # 添加回應內容
                 f.write("## Copilot 回應\n\n")
@@ -514,6 +625,7 @@ class CopilotHandler:
                                         use_smart_wait: bool = None) -> Tuple[bool, int, List[str]]:
         """
         使用專案專用提示詞模式處理專案（按行發送）
+        支援累積串接功能：每次將當前回應串接到下一行提示詞前面
         
         Args:
             project_path: 專案路徑
@@ -537,8 +649,18 @@ class CopilotHandler:
             total_lines = len(prompt_lines)
             self.logger.info(f"開始按行處理專案 {project_name}，共 {total_lines} 行提示詞")
             
+            # 檢查是否啟用回應串接功能
+            interaction_settings = self._load_interaction_settings()
+            include_previous_response = interaction_settings.get("include_previous_response", False)
+            
+            if include_previous_response:
+                self.logger.info("✅ 啟用累積串接功能：每次回應會串接到下一行提示詞前面")
+            else:
+                self.logger.info("ℹ️ 未啟用串接功能：按原始提示詞逐行發送")
+            
             successful_lines = 0
             failed_lines = []
+            accumulated_response = ""  # 累積的回應內容
             
             # 步驟1: 一次性開啟 Copilot Chat
             if not self.open_copilot_chat():
@@ -547,12 +669,23 @@ class CopilotHandler:
                 return False, 0, [error_msg]
             
             # 逐行處理
-            for line_num, prompt_line in enumerate(prompt_lines, 1):
+            for line_num, original_prompt_line in enumerate(prompt_lines, 1):
                 try:
                     self.logger.info(f"處理第 {line_num}/{total_lines} 行...")
                     
-                    # 步驟2: 發送單行提示詞
-                    if not self.send_single_prompt_line(prompt_line, line_num, total_lines):
+                    # 準備當前要發送的提示詞
+                    if include_previous_response and accumulated_response and line_num > 1:
+                        # 串接模式：將累積回應加到當前提示詞前面
+                        current_prompt = f"{accumulated_response}\n{original_prompt_line}"
+                        self.logger.info(f"📎 串接模式：將前面的回應(長度: {len(accumulated_response)} 字元)串接到第 {line_num} 行")
+                    else:
+                        # 第一行或未啟用串接：直接使用原始提示詞
+                        current_prompt = original_prompt_line
+                        if line_num == 1:
+                            self.logger.info(f"🚀 第一行：使用原始提示詞")
+                    
+                    # 步驟2: 發送當前提示詞（可能包含串接內容）
+                    if not self._send_prompt_with_content(current_prompt, line_num, total_lines):
                         error_msg = f"第 {line_num} 行：無法發送提示詞"
                         failed_lines.append(error_msg)
                         self.logger.error(error_msg)
@@ -573,7 +706,12 @@ class CopilotHandler:
                         self.logger.error(error_msg)
                         continue
                     
-                    # 步驟5: 儲存到檔案（包含行號）
+                    # 步驟5: 如果啟用串接功能，更新累積回應
+                    if include_previous_response:
+                        accumulated_response = response.strip()
+                        self.logger.debug(f"💾 累積回應已更新 (長度: {len(accumulated_response)} 字元)")
+                    
+                    # 步驟6: 儲存到檔案（記錄原始提示詞和實際發送內容）
                     if not self.save_response_to_file(
                         project_path, 
                         response, 
@@ -581,7 +719,8 @@ class CopilotHandler:
                         round_number=round_number,
                         line_number=line_num,
                         total_lines=total_lines,
-                        prompt_text=prompt_line
+                        prompt_text=original_prompt_line,
+                        actual_sent_prompt=current_prompt  # 記錄實際發送的內容
                     ):
                         error_msg = f"第 {line_num} 行：無法儲存回應到檔案"
                         failed_lines.append(error_msg)
@@ -597,6 +736,8 @@ class CopilotHandler:
                         time.sleep(1.5)  # 稍長的停頓確保狀態穩定
                     else:
                         self.logger.info("所有行處理完成")
+                        if include_previous_response:
+                            self.logger.info(f"🎯 累積串接處理完成，最終累積回應長度: {len(accumulated_response)} 字元")
                         time.sleep(1)
                     
                 except Exception as e:

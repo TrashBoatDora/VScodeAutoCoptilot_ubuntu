@@ -23,7 +23,7 @@ from src.copilot_handler import CopilotHandler
 from src.image_recognition import ImageRecognition
 from src.ui_manager import UIManager
 from src.error_handler import (
-    ErrorHandler, RetryHandler, RecoveryManager,
+    ErrorHandler, RecoveryManager,
     AutomationError, ErrorType, RecoveryAction
 )
 
@@ -40,7 +40,6 @@ class HybridUIAutomationScript:
         self.error_handler = ErrorHandler()
         self.copilot_handler = CopilotHandler(self.error_handler)  # 傳入 error_handler
         self.image_recognition = ImageRecognition()
-        self.retry_handler = RetryHandler(self.error_handler)
         self.recovery_manager = RecoveryManager()
         self.ui_manager = UIManager()
         
@@ -118,10 +117,6 @@ class HybridUIAutomationScript:
                 self.logger.warning("收到中斷請求，停止處理")
             
             self.logger.info("所有專案處理完成")
-            
-            # 處理失敗的專案（重試）
-            if not self.error_handler.emergency_stop_requested:
-                self._handle_failed_projects()
             
             # 生成最終報告
             if not self.error_handler.emergency_stop_requested:
@@ -271,14 +266,8 @@ class HybridUIAutomationScript:
             # 更新專案狀態為處理中
             self.project_manager.update_project_status(project.name, "processing")
             
-            # 使用重試機制處理專案
-            success, result = self.retry_handler.retry_with_backoff(
-                self._execute_project_automation,
-                max_attempts=config.MAX_RETRY_ATTEMPTS,
-                context=f"專案 {project.name}",
-                project=project,
-                project_logger=project_logger
-            )
+            # 直接執行專案自動化（移除重試機制）
+            success = self._execute_project_automation(project, project_logger)
             
             # 計算處理時間
             processing_time = time.time() - start_time
@@ -291,7 +280,7 @@ class HybridUIAutomationScript:
                 return True
             else:
                 # 標記專案失敗
-                error_msg = result if isinstance(result, str) else "處理失敗"
+                error_msg = "處理失敗"
                 self.project_manager.mark_project_failed(project.name, error_msg, processing_time)
                 project_logger.failed(error_msg)
                 return False
@@ -381,65 +370,68 @@ class HybridUIAutomationScript:
             project_name = Path(project.path).name
             project_result_dir = execution_result_dir / project_name
             
-            # 檢查多輪互動結果檔案（支援多種格式）
-            has_success_file = (project_result_dir.exists() and 
-                              (any(project_result_dir.glob("*_第*輪.md")) or
-                               any(project_result_dir.glob("*_第*輪_第*行.md"))))
+            # 檢查新的輪數資料夾結構
+            has_success_file = False
+            total_files = 0
+            round_dirs = []
+            
+            if project_result_dir.exists():
+                # 查找輪數資料夾 (第1輪, 第2輪, etc.)
+                round_dirs = [d for d in project_result_dir.iterdir() 
+                             if d.is_dir() and d.name.startswith('第') and d.name.endswith('輪')]
+                
+                # 統計所有輪數資料夾中的檔案
+                for round_dir in round_dirs:
+                    files_in_round = list(round_dir.glob("*.md"))
+                    total_files += len(files_in_round)
+                
+                # 如果有輪數資料夾且包含檔案，則認為成功
+                has_success_file = len(round_dirs) > 0 and total_files > 0
             
             # 調試信息
-            has_files = len(list(project_result_dir.glob("*.md"))) if project_result_dir.exists() else 0
             self.logger.info(f"結果檔案驗證 - 目錄存在: {project_result_dir.exists()}, "
-                            f"檔案數量: {has_files}, 多輪互動檔案: {has_success_file}")
+                            f"輪數資料夾: {len(round_dirs)}, 總檔案數: {total_files}, "
+                            f"驗證結果: {has_success_file}")
             
-            if not has_success_file:
-                raise AutomationError("缺少成功執行結果檔案", ErrorType.PROJECT_ERROR)
+            if round_dirs:
+                for round_dir in sorted(round_dirs):
+                    files_count = len(list(round_dir.glob("*.md")))
+                    self.logger.info(f"  {round_dir.name}: {files_count} 個檔案")
             
-            # 步驟5: 關閉專案（處理完成後）
+            # 步驟5: 關閉專案（無論成功失敗都要關閉）
             project_logger.log("關閉 VS Code 專案")
             if not self.vscode_controller.close_current_project():
-                self.logger.warning("專案關閉失敗，但處理已完成")
+                self.logger.warning("專案關閉失敗")
             else:
                 self.logger.info("✅ 專案關閉成功")
+            
+            # 驗證結果
+            if not has_success_file:
+                raise AutomationError("缺少成功執行結果檔案", ErrorType.PROJECT_ERROR)
             
             project_logger.log("專案處理完成")
             return True
             
         except AutomationError:
+            # 確保在異常情況下也關閉 VS Code
+            try:
+                project_logger.log("異常情況下關閉 VS Code 專案")
+                self.vscode_controller.close_current_project()
+            except:
+                pass
             raise
         except Exception as e:
+            # 確保在異常情況下也關閉 VS Code
+            try:
+                project_logger.log("異常情況下關閉 VS Code 專案")
+                self.vscode_controller.close_current_project()
+            except:
+                pass
             raise AutomationError(str(e), ErrorType.UNKNOWN_ERROR)
     
 
     
-    def _handle_failed_projects(self):
-        """處理失敗的專案（重試機制）"""
-        try:
-            retry_projects = self.project_manager.get_retry_projects()
-            
-            if not retry_projects:
-                self.logger.info("沒有需要重試的專案")
-                return
-            
-            self.logger.create_separator(f"重試失敗專案 ({len(retry_projects)} 個)")
-            
-            for project in retry_projects:
-                self.logger.info(f"重試專案: {project.name} (第 {project.retry_count + 1} 次)")
-                
-                # 重設專案狀態為待處理
-                self.project_manager.update_project_status(project.name, "pending")
-                
-                # 重新處理
-                success = self._process_single_project(project)
-                
-                if success:
-                    self.logger.info(f"✅ 專案 {project.name} 重試成功")
-                else:
-                    self.logger.warning(f"❌ 專案 {project.name} 重試仍然失敗")
-                
-                time.sleep(5)  # 重試間休息
-                
-        except Exception as e:
-            self.logger.error(f"處理重試專案時發生錯誤: {str(e)}")
+
     
     def _generate_final_report(self):
         """生成最終報告"""

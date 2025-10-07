@@ -85,7 +85,7 @@ class Config:
     COPILOT_CHAT_MODIFICATION_ACTION = "keep"  # 預設行為：'keep'(保留) 或 'revert'(復原)
     
     # 日誌設定
-    LOG_LEVEL = "INFO"      # 日誌等級：DEBUG, INFO, WARNING, ERROR
+    LOG_LEVEL = "DEBUG"      # 日誌等級：DEBUG, INFO, WARNING, ERROR
     LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
     LOG_FILE_PREFIX = "automation_"
     

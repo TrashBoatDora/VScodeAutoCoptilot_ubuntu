@@ -26,6 +26,8 @@ from src.error_handler import (
     ErrorHandler, RecoveryManager,
     AutomationError, ErrorType, RecoveryAction
 )
+from src.cwe_scan_manager import CWEScanManager
+from src.cwe_scan_ui import show_cwe_scan_settings
 
 class HybridUIAutomationScript:
     """混合式 UI 自動化腳本主控制器"""
@@ -42,10 +44,12 @@ class HybridUIAutomationScript:
         self.image_recognition = ImageRecognition()
         self.recovery_manager = RecoveryManager()
         self.ui_manager = UIManager()
+        self.cwe_scan_manager = None  # CWE 掃描管理器（按需初始化）
         
         # 執行選項
         self.use_smart_wait = True  # 預設使用智能等待
         self.interaction_settings = None  # 儲存互動設定
+        self.cwe_scan_settings = None  # CWE 掃描設定
         
         # 執行統計
         self.total_projects = 0
@@ -68,20 +72,24 @@ class HybridUIAutomationScript:
             self.start_time = time.time()
             self.logger.create_separator("開始執行自動化腳本")
             
-            # 顯示選項對話框
-            reset_selected, self.use_smart_wait = self.ui_manager.show_options_dialog()
+            # 顯示選項對話框（包含專案選擇）
+            selected_projects, self.use_smart_wait, clean_history = self.ui_manager.show_options_dialog()
+            
+            # 如果需要清理歷史記錄
+            if clean_history and selected_projects:
+                self.logger.info(f"清理 {len(selected_projects)} 個專案的執行記錄")
+                if not self.ui_manager.clean_project_history(selected_projects):
+                    self.logger.error("清理執行記錄失敗")
+                    return False
             
             # 每次執行都顯示互動設定選項
             self._show_interaction_settings_dialog()
             
-            # 如果選擇重置，執行重置腳本
-            if reset_selected:
-                self.logger.info("使用者選擇執行專案狀態重置")
-                if not self.ui_manager.execute_reset_if_needed(True):
-                    self.logger.error("重置專案狀態失敗")
-                    return False
+            # 顯示 CWE 掃描設定選項
+            self._show_cwe_scan_settings_dialog()
             
             self.logger.info(f"使用者選擇{'啟用' if self.use_smart_wait else '停用'}智能等待功能")
+            self.logger.info(f"選定處理的專案: {', '.join(selected_projects)}")
             
             # 前置檢查
             if not self._pre_execution_checks():
@@ -93,23 +101,20 @@ class HybridUIAutomationScript:
                 self.logger.error("沒有找到任何專案，結束執行")
                 return False
             
-            self.total_projects = len(projects)
-            self.logger.info(f"總共發現 {self.total_projects} 個專案")
+            # 過濾出使用者選定的專案
+            selected_project_list = [
+                p for p in projects if p.name in selected_projects
+            ]
             
-            # 取得待處理專案
-            pending_projects = self.project_manager.get_pending_projects()
-            if not pending_projects:
-                self.logger.info("所有專案都已處理完成")
-                return True
+            if not selected_project_list:
+                self.logger.error("選定的專案不存在或無法讀取")
+                return False
             
-            self.logger.info(f"待處理專案: {len(pending_projects)} 個")
+            self.total_projects = len(selected_project_list)
+            self.logger.info(f"將處理 {self.total_projects} 個選定的專案")
             
-            # 直接處理所有專案
-            all_projects = self.project_manager.get_all_pending_projects()
-            self.logger.info(f"開始處理 {len(all_projects)} 個專案")
-            
-            # 執行所有專案
-            if not self._process_all_projects(all_projects):
+            # 執行所有選定的專案
+            if not self._process_all_projects(selected_project_list):
                 self.logger.warning("專案處理過程中發生錯誤")
             
             # 檢查是否收到中斷請求
@@ -161,6 +166,40 @@ class HybridUIAutomationScript:
         except Exception as e:
             self.logger.error(f"顯示互動設定時發生錯誤: {e}")
             # 發生錯誤時也退出腳本
+            sys.exit(1)
+    
+    def _show_cwe_scan_settings_dialog(self):
+        """顯示 CWE 掃描設定對話框"""
+        try:
+            self.logger.info("顯示 CWE 掃描設定介面")
+            
+            # 載入預設設定
+            default_settings = {
+                "enabled": False,
+                "cwe_type": "022",  # 預設為 CWE-022
+                "output_dir": str(Path("./CWE_Result").absolute())
+            }
+            
+            settings = show_cwe_scan_settings(default_settings)
+            
+            if settings is None:
+                # 使用者取消了設定
+                self.logger.info("使用者取消了 CWE 掃描設定，結束腳本執行")
+                sys.exit(0)
+            else:
+                # 儲存設定
+                self.cwe_scan_settings = settings
+                
+                # 如果啟用了掃描，初始化掃描管理器
+                if settings["enabled"]:
+                    output_dir = Path(settings["output_dir"])
+                    self.cwe_scan_manager = CWEScanManager(output_dir)
+                    self.logger.info(f"✅ CWE 掃描已啟用 (類型: CWE-{settings['cwe_type']})")
+                else:
+                    self.logger.info("ℹ️ CWE 掃描未啟用")
+                
+        except Exception as e:
+            self.logger.error(f"顯示 CWE 掃描設定時發生錯誤: {e}")
             sys.exit(1)
 
     def _pre_execution_checks(self) -> bool:
@@ -363,6 +402,11 @@ class HybridUIAutomationScript:
             if self.error_handler.emergency_stop_requested:
                 raise AutomationError("收到中斷請求", ErrorType.USER_INTERRUPT)
             
+            # 步驟3.5: 執行 CWE 掃描（如果啟用）
+            if self.cwe_scan_settings and self.cwe_scan_settings["enabled"]:
+                project_logger.log("執行 CWE 漏洞掃描")
+                self._execute_cwe_scan(project, project_logger)
+            
             # 步驟4: 驗證結果
             project_logger.log("驗證處理結果")
             script_root = Path(__file__).parent  # 腳本根目錄
@@ -429,6 +473,73 @@ class HybridUIAutomationScript:
                 pass
             raise AutomationError(str(e), ErrorType.UNKNOWN_ERROR)
     
+    def _execute_cwe_scan(self, project: ProjectInfo, project_logger) -> bool:
+        """
+        執行 CWE 掃描
+        
+        Args:
+            project: 專案資訊
+            project_logger: 專案日誌記錄器
+            
+        Returns:
+            bool: 掃描是否成功
+        """
+        try:
+            if not self.cwe_scan_manager:
+                self.logger.warning("CWE 掃描管理器未初始化")
+                return False
+            
+            project_name = Path(project.path).name
+            cwe_type = self.cwe_scan_settings["cwe_type"]
+            
+            self.logger.info(f"開始執行 CWE-{cwe_type} 掃描...")
+            
+            # 讀取專案的 prompt 檔案
+            prompt_source_mode = self.interaction_settings.get(
+                "prompt_source_mode", 
+                config.PROMPT_SOURCE_MODE
+            ) if self.interaction_settings else config.PROMPT_SOURCE_MODE
+            
+            # 根據 prompt 來源模式讀取 prompt
+            if prompt_source_mode == "project":
+                # 專案專用提示詞模式：讀取專案目錄下的 prompt.txt
+                prompt_file = Path(project.path) / config.PROJECT_PROMPT_FILENAME
+                if not prompt_file.exists():
+                    self.logger.warning(f"專案提示詞檔案不存在: {prompt_file}")
+                    return False
+            else:
+                # 全域提示詞模式：讀取 prompts/prompt1.txt
+                prompt_file = config.PROMPT1_FILE_PATH
+                if not prompt_file.exists():
+                    self.logger.warning(f"全域提示詞檔案不存在: {prompt_file}")
+                    return False
+            
+            # 讀取 prompt 內容
+            with open(prompt_file, 'r', encoding='utf-8') as f:
+                prompt_content = f.read()
+            
+            # 執行掃描
+            success, result_files = self.cwe_scan_manager.scan_from_prompt(
+                project_path=Path(project.path),
+                project_name=project_name,
+                prompt_content=prompt_content,
+                cwe_type=cwe_type
+            )
+            
+            if success:
+                scan_file, stats_file = result_files
+                self.logger.info(f"✅ CWE 掃描完成")
+                self.logger.info(f"  掃描結果: {scan_file}")
+                self.logger.info(f"  統計資料: {stats_file}")
+                project_logger.log(f"CWE-{cwe_type} 掃描完成")
+                return True
+            else:
+                self.logger.warning("CWE 掃描失敗")
+                return False
+                
+        except Exception as e:
+            self.logger.error(f"執行 CWE 掃描時發生錯誤: {e}")
+            return False
 
     
 

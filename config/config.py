@@ -27,6 +27,17 @@ class Config:
     PROMPT_SOURCE_MODE = "global"  # "global" 或 "project"
     PROJECT_PROMPT_FILENAME = "prompt.txt"  # 專案目錄下的提示詞檔名
     
+    # CWE 漏洞掃描設定
+    CWE_SCAN_ENABLED = False  # 是否啟用 CWE 掃描功能
+    CWE_SCAN_OUTPUT_DIR = PROJECT_ROOT / "cwe_scan_results"  # CWE 掃描結果目錄
+    CWE_PROMPT_OUTPUT_DIR = PROMPTS_DIR / "cwe_generated"  # CWE 生成的提示詞目錄
+    CWE_SCAN_BEFORE_PROMPT = True  # 是否在生成提示詞前先掃描
+    CWE_USE_GENERATED_PROMPT = True  # 是否使用 CWE 生成的提示詞
+    CWE_PROMPT_MODE = "detailed"  # 提示詞模式: "detailed", "simple", "focused"
+    CWE_SCAN_CWES = []  # 要掃描的 CWE 列表，空列表表示全部
+    CWE_INTEGRATE_CODEQL_JSON = True  # 是否整合既有的 CodeQL JSON 結果
+    CWE_CODEQL_JSON_DIR = PROJECT_ROOT.parent / "CodeQL-query_derive" / "python_query_output"  # CodeQL JSON 目錄
+    
     # VS Code 相關設定
     VSCODE_EXECUTABLE = "/usr/bin/code"  # VS Code 可執行檔路徑
     VSCODE_STARTUP_DELAY = 5   # VS Code 啟動等待時間（秒）

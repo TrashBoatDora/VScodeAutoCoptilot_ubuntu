@@ -1,0 +1,403 @@
+# -*- coding: utf-8 -*-
+"""
+專案選擇器 UI - 讓使用者選擇要處理的專案
+"""
+
+import tkinter as tk
+from tkinter import ttk, messagebox
+from pathlib import Path
+from typing import List, Set, Tuple
+import shutil
+from datetime import datetime
+
+from src.logger import get_logger
+
+logger = get_logger("ProjectSelectorUI")
+
+
+class ProjectSelectorUI:
+    """專案選擇器介面"""
+    
+    def __init__(self, projects_dir: Path):
+        """
+        初始化專案選擇器
+        
+        Args:
+            projects_dir: 專案目錄路徑
+        """
+        self.projects_dir = Path(projects_dir)
+        self.root = tk.Tk()
+        self.root.title("專案選擇器")
+        self.root.geometry("700x600")
+        self.root.resizable(True, True)
+        
+        # 設定關閉事件處理
+        self.root.protocol("WM_DELETE_WINDOW", self.on_close)
+        self.cancelled = False
+        
+        # 儲存選擇結果
+        self.selected_projects: Set[str] = set()
+        self.clean_history = True  # 選擇專案即清理歷史記錄（固定為 True）
+        
+        # 掃描專案
+        self.available_projects = self._scan_projects()
+        
+        # 建立 UI
+        self.create_widgets()
+        
+    def _scan_projects(self) -> List[dict]:
+        """
+        掃描 projects 目錄下的所有專案
+        
+        Returns:
+            List[dict]: 專案資訊列表
+        """
+        projects = []
+        
+        if not self.projects_dir.exists():
+            logger.warning(f"專案目錄不存在: {self.projects_dir}")
+            return projects
+        
+        for item in self.projects_dir.iterdir():
+            if item.is_dir() and not item.name.startswith('.'):
+                # 檢查是否有 prompt.txt
+                has_prompt = (item / "prompt.txt").exists()
+                
+                # 計算檔案數量
+                file_count = len([f for f in item.rglob('*') if f.is_file()])
+                
+                # 檢查是否有執行記錄
+                has_execution_log = self._check_execution_history(item.name)
+                
+                projects.append({
+                    'name': item.name,
+                    'path': item,
+                    'has_prompt': has_prompt,
+                    'file_count': file_count,
+                    'has_history': has_execution_log
+                })
+        
+        # 按名稱排序
+        projects.sort(key=lambda x: x['name'])
+        
+        logger.info(f"掃描到 {len(projects)} 個專案")
+        return projects
+    
+    def _check_execution_history(self, project_name: str) -> bool:
+        """
+        檢查專案是否有執行歷史記錄
+        
+        Args:
+            project_name: 專案名稱
+            
+        Returns:
+            bool: 是否有執行記錄
+        """
+        script_root = self.projects_dir.parent
+        
+        # 檢查各種可能的記錄位置
+        locations = [
+            script_root / "ExecutionResult" / "Success" / project_name,
+            script_root / "ExecutionResult" / "AutomationLog" / f"{project_name}*.txt",
+            script_root / "ExecutionResult" / "AutomationReport",
+            script_root / "CWE_Result",
+            script_root / "cwe_scan_results"
+        ]
+        
+        for location in locations:
+            if location.exists():
+                if location.is_dir() and any(location.iterdir()):
+                    return True
+                elif location.is_file():
+                    return True
+        
+        return False
+    
+    def create_widgets(self):
+        """建立 UI 元件"""
+        # 主標題
+        title_frame = ttk.Frame(self.root)
+        title_frame.pack(fill="x", padx=20, pady=15)
+        
+        title_label = tk.Label(
+            title_frame,
+            text="選擇要處理的專案",
+            font=("Arial", 16, "bold")
+        )
+        title_label.pack()
+        
+        subtitle_label = tk.Label(
+            title_frame,
+            text=f"從 {len(self.available_projects)} 個可用專案中選擇",
+            font=("Arial", 10),
+            fg="gray"
+        )
+        subtitle_label.pack(pady=(5, 0))
+        
+        # 說明文字
+        info_frame = ttk.LabelFrame(self.root, text="說明", padding=10)
+        info_frame.pack(fill="x", padx=20, pady=(0, 10))
+        
+        info_text = (
+            "• 勾選要執行自動化腳本的專案\n"
+            "• 選定的專案將自動清除先前的執行記錄\n"
+            "• 未選擇的專案將被跳過，不會處理"
+        )
+        info_label = tk.Label(info_frame, text=info_text, justify="left")
+        info_label.pack()
+        
+        # 專案列表區域（可滾動）
+        list_frame = ttk.LabelFrame(self.root, text="可用專案", padding=10)
+        list_frame.pack(fill="both", expand=True, padx=20, pady=(0, 10))
+        
+        # 創建可滾動的框架
+        self.create_scrollable_list(list_frame)
+        
+        # 快速選擇按鈕
+        quick_select_frame = ttk.Frame(self.root)
+        quick_select_frame.pack(fill="x", padx=20, pady=(0, 10))
+        
+        ttk.Button(
+            quick_select_frame,
+            text="全選",
+            command=self.select_all,
+            width=10
+        ).pack(side="left", padx=5)
+        
+        ttk.Button(
+            quick_select_frame,
+            text="全不選",
+            command=self.deselect_all,
+            width=10
+        ).pack(side="left", padx=5)
+        
+        ttk.Button(
+            quick_select_frame,
+            text="反選",
+            command=self.invert_selection,
+            width=10
+        ).pack(side="left", padx=5)
+        
+        # 底部按鈕
+        button_frame = ttk.Frame(self.root)
+        button_frame.pack(fill="x", padx=20, pady=(0, 20))
+        
+        # 統計資訊
+        self.stats_label = tk.Label(
+            button_frame,
+            text="已選擇: 0 個專案",
+            font=("Arial", 10)
+        )
+        self.stats_label.pack(side="left")
+        
+        # 確認和取消按鈕
+        ttk.Button(
+            button_frame,
+            text="取消",
+            command=self.on_cancel,
+            width=12
+        ).pack(side="right", padx=(5, 0))
+        
+        ttk.Button(
+            button_frame,
+            text="確認",
+            command=self.on_confirm,
+            width=12
+        ).pack(side="right")
+    
+    def create_scrollable_list(self, parent):
+        """創建可滾動的專案列表"""
+        # 創建 Canvas 和 Scrollbar
+        canvas = tk.Canvas(parent, highlightthickness=0)
+        scrollbar = ttk.Scrollbar(parent, orient="vertical", command=canvas.yview)
+        scrollable_frame = ttk.Frame(canvas)
+        
+        scrollable_frame.bind(
+            "<Configure>",
+            lambda e: canvas.configure(scrollregion=canvas.bbox("all"))
+        )
+        
+        canvas.create_window((0, 0), window=scrollable_frame, anchor="nw")
+        canvas.configure(yscrollcommand=scrollbar.set)
+        
+        # 綁定滾輪事件
+        canvas.bind("<MouseWheel>", lambda e: canvas.yview_scroll(int(-1 * (e.delta / 120)), "units"))
+        
+        canvas.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+        
+        # 儲存勾選框變數
+        self.project_vars = {}
+        
+        # 創建專案列表
+        if not self.available_projects:
+            no_project_label = tk.Label(
+                scrollable_frame,
+                text="沒有可用的專案",
+                font=("Arial", 12),
+                fg="gray"
+            )
+            no_project_label.pack(pady=50)
+        else:
+            for project in self.available_projects:
+                self._create_project_item(scrollable_frame, project)
+    
+    def _create_project_item(self, parent, project: dict):
+        """創建單個專案項目"""
+        item_frame = ttk.Frame(parent)
+        item_frame.pack(fill="x", padx=5, pady=3)
+        
+        # 勾選框
+        var = tk.BooleanVar(value=False)
+        self.project_vars[project['name']] = var
+        
+        # 綁定變數變化事件（使用傳統 trace 方法）
+        var.trace('w', lambda *args: self.update_stats())
+        
+        checkbox = ttk.Checkbutton(
+            item_frame,
+            variable=var
+        )
+        checkbox.pack(side="left", padx=(0, 10))
+        
+        # 專案資訊
+        info_frame = ttk.Frame(item_frame)
+        info_frame.pack(side="left", fill="x", expand=True)
+        
+        # 專案名稱
+        name_label = tk.Label(
+            info_frame,
+            text=project['name'],
+            font=("Arial", 10, "bold"),
+            anchor="w"
+        )
+        name_label.pack(fill="x")
+        
+        # 詳細資訊
+        details = []
+        if project['has_prompt']:
+            details.append("✓ Prompt")
+        else:
+            details.append("✗ 無 Prompt")
+        
+        details.append(f"{project['file_count']} 個檔案")
+        
+        if project['has_history']:
+            details.append("📋 有執行記錄")
+        
+        detail_text = " | ".join(details)
+        detail_label = tk.Label(
+            info_frame,
+            text=detail_text,
+            font=("Arial", 9),
+            fg="gray",
+            anchor="w"
+        )
+        detail_label.pack(fill="x")
+    
+    def update_stats(self):
+        """更新統計資訊"""
+        selected_count = sum(1 for var in self.project_vars.values() if var.get())
+        text = f"已選擇: {selected_count} 個專案"
+        self.stats_label.config(text=text)
+        self.stats_label.update_idletasks()  # 強制更新 UI
+        logger.debug(f"統計更新: {text}")
+    
+    def select_all(self):
+        """全選"""
+        for var in self.project_vars.values():
+            var.set(True)
+        self.update_stats()
+    
+    def deselect_all(self):
+        """全不選"""
+        for var in self.project_vars.values():
+            var.set(False)
+        self.update_stats()
+    
+    def invert_selection(self):
+        """反選"""
+        for var in self.project_vars.values():
+            var.set(not var.get())
+        self.update_stats()
+    
+    def on_confirm(self):
+        """確認按鈕事件"""
+        # 收集選中的專案
+        self.selected_projects = {
+            name for name, var in self.project_vars.items() if var.get()
+        }
+        
+        # 調試輸出
+        logger.info(f"收集到的專案: {self.selected_projects}")
+        logger.info(f"專案變數狀態: {[(name, var.get()) for name, var in self.project_vars.items()]}")
+        
+        if not self.selected_projects:
+            messagebox.showwarning(
+                "未選擇專案",
+                "請至少選擇一個專案！"
+            )
+            return
+        
+        # 確認對話框
+        message = (
+            f"您選擇了 {len(self.selected_projects)} 個專案。\n\n"
+            f"確認要處理這些專案嗎？\n\n"
+            f"⚠️  將會清除這些專案的執行記錄和結果！"
+        )
+        
+        if messagebox.askyesno("確認選擇", message):
+            self.clean_history = True  # 固定為 True
+            self.cancelled = False
+            logger.info(f"使用者確認選擇: {self.selected_projects}")
+            self.root.destroy()
+        else:
+            logger.info("使用者取消確認")
+    
+    def on_cancel(self):
+        """取消按鈕事件"""
+        self.cancelled = True
+        self.selected_projects = set()
+        self.root.destroy()
+    
+    def on_close(self):
+        """視窗關閉事件"""
+        self.on_cancel()
+    
+    def show(self) -> Tuple[Set[str], bool, bool]:
+        """
+        顯示對話框並等待使用者操作
+        
+        Returns:
+            Tuple: (選中的專案集合, 是否清理歷史, 是否被取消)
+        """
+        self.root.mainloop()
+        return self.selected_projects, self.clean_history, self.cancelled
+
+
+def show_project_selector(projects_dir: Path = None) -> Tuple[Set[str], bool, bool]:
+    """
+    顯示專案選擇器對話框
+    
+    Args:
+        projects_dir: 專案目錄路徑，預設為 ./projects
+        
+    Returns:
+        Tuple: (選中的專案集合, 是否清理歷史, 是否被取消)
+    """
+    if projects_dir is None:
+        projects_dir = Path(__file__).parent.parent / "projects"
+    
+    ui = ProjectSelectorUI(projects_dir)
+    return ui.show()
+
+
+if __name__ == "__main__":
+    # 測試用
+    selected, clean, cancelled = show_project_selector()
+    
+    if not cancelled:
+        print(f"\n選中的專案: {selected}")
+        print(f"清理歷史: {clean}")
+    else:
+        print("\n已取消")

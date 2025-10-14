@@ -328,12 +328,21 @@ class ProjectManager:
             execution_result_dir = script_root / "ExecutionResult" / "Success"
             project_result_dir = execution_result_dir / project_name
             
-            # 檢查多輪互動檔案格式（支援多種格式）
-            has_success_file = (project_result_dir.exists() and 
-                              (any(project_result_dir.glob("*_第*輪.md")) or
-                               any(project_result_dir.glob("*_第*輪_第*行.md"))))
+            # 檢查多輪互動檔案格式（支援多種格式，包含子目錄）
+            has_success_file = False
+            has_files = 0
             
-            has_files = len(list(project_result_dir.glob("*.md"))) if project_result_dir.exists() else 0
+            if project_result_dir.exists():
+                # 檢查直接在目錄下的檔案
+                direct_files = list(project_result_dir.glob("*_第*輪.md")) + list(project_result_dir.glob("*_第*輪_第*行.md"))
+                # 檢查子目錄（第1輪/、第2輪/ 等）內的檔案
+                subdir_files = list(project_result_dir.glob("第*輪/*_第*行.md"))
+                # 遞迴檢查所有 .md 檔案
+                all_md_files = list(project_result_dir.rglob("*.md"))
+                
+                has_success_file = len(direct_files) > 0 or len(subdir_files) > 0
+                has_files = len(all_md_files)
+            
             self.logger.info(f"結果檔案驗證 - 目錄存在: {project_result_dir.exists()}, "
                              f"檔案數量: {has_files}, 多輪互動檔案: {has_success_file}")
             

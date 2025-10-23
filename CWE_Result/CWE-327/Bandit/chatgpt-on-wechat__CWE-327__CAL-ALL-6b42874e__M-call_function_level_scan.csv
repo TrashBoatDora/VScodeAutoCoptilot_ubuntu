@@ -1,0 +1,7 @@
+輪數,行號,檔案名稱_函式名稱,函式起始行,函式結束行,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
+1,0,lib/itchat/async_components/messages.py__prepare_file(),285,308,1,303,bandit,HIGH,HIGH,Use of weak MD5 hash for security. Consider usedforsecurity=False,success,
+1,0,lib/itchat/components/messages.py__prepare_file(),286,309,1,304,bandit,HIGH,HIGH,Use of weak MD5 hash for security. Consider usedforsecurity=False,success,
+1,0,translate/baidu/baidu_translate.py_make_md5(),48,51,1,50,bandit,HIGH,HIGH,Use of weak MD5 hash for security. Consider usedforsecurity=False,success,
+1,0,voice/ali/ali_api.py_sign_request(),,,0,,bandit,,,,success,
+1,0,voice/xunfei/xunfei_asr.py_create_url(),,,0,,bandit,,,,success,
+1,0,voice/xunfei/xunfei_tts.py_create_url(),,,0,,bandit,,,,success,

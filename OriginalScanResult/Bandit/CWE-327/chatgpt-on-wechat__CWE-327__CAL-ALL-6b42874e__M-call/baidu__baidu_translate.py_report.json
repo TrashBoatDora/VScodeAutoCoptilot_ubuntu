@@ -1,0 +1,54 @@
+{
+  "errors": [],
+  "generated_at": "2025-10-23T13:52:06Z",
+  "metrics": {
+    "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/chatgpt-on-wechat__CWE-327__CAL-ALL-6b42874e__M-call/translate/baidu/baidu_translate.py": {
+      "CONFIDENCE.HIGH": 1,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 1,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 40,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "_totals": {
+      "CONFIDENCE.HIGH": 1,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 1,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 40,
+      "nosec": 0,
+      "skipped_tests": 0
+    }
+  },
+  "results": [
+    {
+      "code": "49         import hashlib\n50         return hashlib.md5(s.encode(encoding)).hexdigest()\n51 \n",
+      "col_offset": 15,
+      "end_col_offset": 46,
+      "filename": "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/chatgpt-on-wechat__CWE-327__CAL-ALL-6b42874e__M-call/translate/baidu/baidu_translate.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 327,
+        "link": "https://cwe.mitre.org/data/definitions/327.html"
+      },
+      "issue_severity": "HIGH",
+      "issue_text": "Use of weak MD5 hash for security. Consider usedforsecurity=False",
+      "line_number": 50,
+      "line_range": [
+        50
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.8.6/plugins/b324_hashlib.html",
+      "test_id": "B324",
+      "test_name": "hashlib"
+    }
+  ]
+}

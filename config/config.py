@@ -24,12 +24,12 @@ class Config:
     PROMPT2_FILE_PATH = PROMPTS_DIR / "prompt2.txt"  # 第二輪以後互動使用
     
     # 新增：專案專用提示詞模式設定
-    PROMPT_SOURCE_MODE = "global"  # "global" 或 "project"
+    PROMPT_SOURCE_MODE = "project"  # "global" 或 "project"
     PROJECT_PROMPT_FILENAME = "prompt.txt"  # 專案目錄下的提示詞檔名
     
     # CWE 漏洞掃描設定
     CWE_SCAN_ENABLED = False  # 是否啟用 CWE 掃描功能
-    CWE_SCAN_OUTPUT_DIR = PROJECT_ROOT / "cwe_scan_results"  # CWE 掃描結果目錄
+    CWE_SCAN_OUTPUT_DIR = PROJECT_ROOT / "OriginalScanResult"  # CWE 掃描結果目錄（已更新）
     CWE_PROMPT_OUTPUT_DIR = PROMPTS_DIR / "cwe_generated"  # CWE 生成的提示詞目錄
     CWE_SCAN_BEFORE_PROMPT = True  # 是否在生成提示詞前先掃描
     CWE_USE_GENERATED_PROMPT = True  # 是否使用 CWE 生成的提示詞
@@ -45,7 +45,7 @@ class Config:
     VSCODE_COMMAND_DELAY = 1    # 命令執行間隔時間（秒）
     
     # Copilot Chat 相關設定
-    COPILOT_RESPONSE_TIMEOUT = 300   # Copilot 回應超時時間（秒） - 增加到300秒
+    COPILOT_RESPONSE_TIMEOUT = 999999999999  # Copilot 回應超時時間（秒） - 增加到999999999999秒
     COPILOT_CHECK_INTERVAL = 3      # 檢查回應完成間隔（秒）
     COPILOT_COPY_RETRY_MAX = 3      # 複製回應重試次數
     COPILOT_COPY_RETRY_DELAY = 2    # 複製重試間隔（秒）
@@ -54,7 +54,7 @@ class Config:
     SMART_WAIT_ENABLED = True    # 是否啟用智能等待
     SMART_WAIT_MAX_ATTEMPTS = 30  # 智能等待最大嘗試次數 - 增加到30次
     SMART_WAIT_INTERVAL = 2      # 智能等待檢查間隔（秒） - 減少到2秒提高響應性
-    SMART_WAIT_TIMEOUT = 300      # 智能等待最大時間（秒） - 與主超時時間保持一致
+    SMART_WAIT_TIMEOUT = 999999999999      # 智能等待最大時間（秒） - 與主超時時間保持一致
     
     # Copilot 記憶清除命令序列
     COPILOT_CLEAR_MEMORY_COMMANDS = [
@@ -84,14 +84,11 @@ class Config:
     MAX_RETRY_ATTEMPTS = 3  # 失敗重試次數
     
     # 反覆互動設定（將從 settings.json 讀取，以下為預設值）
-    INTERACTION_MAX_ROUNDS = 3      # 最大互動輪數
+    INTERACTION_MAX_ROUNDS = 1      # 最大互動輪數
     INTERACTION_ENABLED = True      # 是否啟用反覆互動功能
     INTERACTION_ROUND_DELAY = 2     # 每輪互動間隔時間（秒）
-    INTERACTION_INCLUDE_PREVIOUS_RESPONSE = True  # 是否在新一輪提示詞中包含上一輪 Copilot 回應
+    INTERACTION_INCLUDE_PREVIOUS_RESPONSE = False  # 是否在新一輪提示詞中包含上一輪 Copilot 回應
     INTERACTION_SHOW_UI_ON_STARTUP = True  # 是否在啟動時顯示設定介面
-    INTERACTION_RESPONSE_CHAINING_PREFIX = "我們繼續基於前一次的討論。你的上一次回答是：\n\n"  # 回應串接前綴
-    INTERACTION_RESPONSE_CHAINING_SUFFIX = "\n\n現在，請針對以下問題或指示繼續：\n\n"  # 回應串接後綴
-    
     # CopilotChat 修改結果處理設定
     COPILOT_CHAT_MODIFICATION_ACTION = "keep"  # 預設行為：'keep'(保留) 或 'revert'(復原)
     

@@ -1,28 +1,81 @@
 # VS Code Copilot 自動互動系統
 
-## 🚀 快速開始
+## ✨ 最新更新
+
+### 🔥 Rate Limit 自動處理機制（2025-10-15）
+- ✅ **自動檢測**：識別 Copilot 回應是否完整
+- ✅ **智能重試**：遇到 rate limit 自動暫停並重試
+- ✅ **指數退避**：重試等待時間自動遞增
+- ✅ **零配置**：無需修改代碼，直接使用
+- 📖 **快速上手**：[RATE_LIMIT_QUICKSTART.md](RATE_LIMIT_QUICKSTART.md)
+- � **詳細指南**：[RATE_LIMIT_INTEGRATION_GUIDE.md](RATE_LIMIT_INTEGRATION_GUIDE.md)
+
+## �🚀 快速開始
 
 ### 系統需求
-- Ubuntu / Linux
-- Python 3.8+
-- VS Code
-- Copilot 擴充功能
+- **作業系統**: Ubuntu 20.04+ / Linux（建議使用 Ubuntu 20.04 LTS）
+- **Python**: 3.10.12 或更高版本（必須使用 conda 環境 `copilot_py310`）
+- **VS Code**: 最新版本
+- **CodeQL CLI**: 2.22.4 或更高版本（可選，用於進階掃描）
+- **Copilot 擴充功能**: 已啟用並登入
+
+### 環境啟動
+```bash
+# 啟動 Python 3.10.12 環境（必須！）
+source activate_env.sh
+
+# 或手動啟動
+source ~/anaconda3/etc/profile.d/conda.sh
+conda activate copilot_py310
+```
+
+### 系統環境檢查
+```bash
+# 檢查版本（啟動環境後執行）
+python --version      # 應顯示 Python 3.10.12
+bandit --version      # 應顯示 bandit 1.8.6 或更高
+semgrep --version     # 應顯示 semgrep 1.140.0 或更高
+codeql --version      # 應顯示 CodeQL CLI 2.22.4 或更高（如已安裝）
+```
 
 ### 快速安裝
 ```bash
-# 1. 安裝系統依賴（Ubuntu）
-sudo apt-get install -y xclip wl-clipboard
+# 1. 安裝系統依賴（Ubuntu 20.04）
+sudo apt-get update
+sudo apt-get install -y xclip wl-clipboard python3-pip
 
-# 2. 安裝 Python 依賴
+# 2. 創建 Python 3.10.12 環境（如未安裝）
+conda create -n copilot_py310 python=3.10.12 -y
+
+# 3. 啟動環境
+source ~/anaconda3/etc/profile.d/conda.sh
+conda activate copilot_py310
+
+# 4. 安裝 Python 依賴
 pip install -r requirements.txt
 
-# 3. 安裝 Bandit（CWE 掃描需要）
-pip install bandit
+# 5. 驗證安裝
+python --version    # 應為 Python 3.10.12
+bandit --version    # 應為 bandit 1.8.6
+semgrep --version   # 應為 semgrep 1.140.0 或更高
 
-# 4. 設定 VS Code 快捷鍵
+# 6. 安裝 CodeQL CLI（可選，用於進階掃描）
+# 下載: https://github.com/github/codeql-cli-binaries/releases
+# 解壓並加入 PATH
+
+# 7. 設定 VS Code 快捷鍵
 # Ctrl+K → Ctrl+S 開啟快捷鍵設定
 # 找到 "chat:open chat agent"
 # 綁定為 Ctrl+F1
+```
+
+### 日常使用
+```bash
+# 每次使用前啟動環境
+source activate_env.sh
+
+# 執行主程式
+python main.py
 ```
 
 ### 執行
@@ -30,10 +83,17 @@ pip install bandit
 python main.py
 ```
 
+### 驗證 Rate Limit 功能
+```bash
+python test_rate_limit_handler.py
+```
+
 ## 📚 完整文檔
 
 ### 主要文檔
 - **[完整使用指南](README_CWE.md)** - 詳細的功能說明和使用方法
+- **[Rate Limit 快速上手](RATE_LIMIT_QUICKSTART.md)** - Rate Limit 處理機制快速指南 🆕
+- **[Rate Limit 整合指南](RATE_LIMIT_INTEGRATION_GUIDE.md)** - Rate Limit 深度整合文檔 🆕
 - **[CWE 掃描指南](docs/CWE_SCAN_GUIDE.md)** - CWE 漏洞掃描功能使用
 - **[快速參考](CWE_SCAN_QUICK_REFERENCE.md)** - 常用命令和設定
 
@@ -44,11 +104,21 @@ python verify_cwe_installation.py
 
 # 測試 CWE 掃描功能
 python test_cwe_scan.py
+
+# 測試 Rate Limit 處理機制（新增）
+python test_rate_limit_handler.py
 ```
 
 ## 🎯 主要功能
 
-### 1. 自動化 Copilot 互動
+### 1. Rate Limit 智能處理 🆕
+- 自動檢測回應完整性
+- 識別 rate limit 錯誤
+- 自動暫停並重試
+- 可配置的重試策略
+- 詳細的統計報告
+
+### 2. 自動化 Copilot 互動
 - 自動開啟專案
 - 自動發送 prompt
 - 智能等待回應

@@ -28,8 +28,8 @@
         },
         "interaction": {
             "enabled": true,
-            "max_rounds": 5,
-            "include_previous_response": true,
+            "max_rounds": 1,
+            "include_previous_response": false,
             "round_delay": 2,
             "show_ui_on_startup": true
         },

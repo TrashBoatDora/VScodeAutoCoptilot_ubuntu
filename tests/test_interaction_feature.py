@@ -56,8 +56,7 @@ def test_interaction_settings():
         print(f"   ❌ 測試失敗: {e}")
     
     print("\n3. 測試配置參數...")
-    print(f"   預設回應串接前綴: {config.INTERACTION_RESPONSE_CHAINING_PREFIX.strip()}")
-    print(f"   預設回應串接後綴: {config.INTERACTION_RESPONSE_CHAINING_SUFFIX.strip()}")
+    print("   回應串接前後綴設定已移除。")
     
     print("\n測試完成！")
 

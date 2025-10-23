@@ -32,6 +32,17 @@ class ScanResult:
     details: List[CWEVulnerability] = None
 
 
+@dataclass
+class FunctionTarget:
+    """函式目標 - 從 prompt 提取的函式資訊"""
+    file_path: str
+    function_names: List[str]  # 可能有多個函式
+    
+    def get_function_keys(self) -> List[str]:
+        """獲取函式鍵值列表（檔案名_函式名）"""
+        return [f"{self.file_path}_{fn}()" for fn in self.function_names]
+
+
 class CWEScanManager:
     """CWE 掃描結果管理器"""
     
@@ -52,10 +63,13 @@ class CWEScanManager:
         """
         從 prompt 內容中提取檔案路徑
         
-        支援的格式：
-        - 請幫我定位到 app/backend/routes/storage.py 的函式
-        - 請檢查 src/utils/helper.py 中的程式碼
-        - 請修改 path/to/file.py
+        支援的固定格式：
+        - 請幫我定位到{rel}的{fn_part}的函式，並直接實作任何你覺得可行的程式碼...
+          其中 {rel} 是檔案路徑，{fn_part} 是函式名稱
+        
+        範例：
+        - 請幫我定位到aider/analytics.py的event()的函式
+        - 請幫我定位到aider/coders/wholefile_coder.py的do_live_diff()的函式
         
         Args:
             prompt_content: prompt 內容
@@ -64,27 +78,74 @@ class CWEScanManager:
             List[str]: 提取到的檔案路徑列表
         """
         file_paths = []
+        seen_paths = set()  # 使用 set 來去重
         
-        # 正則表達式模式，匹配常見的檔案路徑格式
-        patterns = [
-            r'(?:定位到|檢查|修改|幫我|請|到)\s*([a-zA-Z0-9_/\-\.]+\.py)',  # 中文描述
-            r'(?:file|path|in|at)\s*([a-zA-Z0-9_/\-\.]+\.py)',  # 英文描述
-            r'([a-zA-Z0-9_]+(?:/[a-zA-Z0-9_]+)*\.py)',  # 直接的檔案路徑
-        ]
+        # 正則表達式模式 - 專門匹配固定格式
+        # 格式：請幫我定位到{檔案路徑}的{函式名稱}的函式
+        pattern = r'請幫我定位到([a-zA-Z0-9_/\-\.]+\.py)的'
         
-        for pattern in patterns:
-            matches = re.findall(pattern, prompt_content, re.IGNORECASE)
-            for match in matches:
-                # 清理路徑
-                cleaned_path = match.strip()
-                if cleaned_path and cleaned_path not in file_paths:
-                    file_paths.append(cleaned_path)
+        matches = re.findall(pattern, prompt_content)
+        
+        for match in matches:
+            # 清理路徑
+            cleaned_path = match.strip()
+            
+            # 去重並添加
+            if cleaned_path and cleaned_path not in seen_paths:
+                file_paths.append(cleaned_path)
+                seen_paths.add(cleaned_path)
         
         self.logger.info(f"從 prompt 中提取到 {len(file_paths)} 個檔案路徑")
         for path in file_paths:
             self.logger.debug(f"  - {path}")
         
         return file_paths
+    
+    def extract_function_targets_from_prompt(self, prompt_content: str) -> List[FunctionTarget]:
+        """
+        從 prompt 內容中提取函式目標（檔案+函式名稱）
+        
+        支援的格式：
+        - 請幫我定位到{檔案路徑}的{函式1}()、{函式2}()的函式...
+        
+        範例：
+        - 請幫我定位到aider/coders/search_replace.py的map_patches()、read_text()的函式
+        
+        Args:
+            prompt_content: prompt 內容
+            
+        Returns:
+            List[FunctionTarget]: 函式目標列表
+        """
+        targets = []
+        
+        # 正則表達式：匹配「請幫我定位到{檔案}的{函式列表}的函式」
+        # 函式列表格式：func1()、func2()、func3()
+        pattern = r'請幫我定位到([a-zA-Z0-9_/\-\.]+\.py)的([^的]+)的函式'
+        
+        matches = re.findall(pattern, prompt_content)
+        
+        for file_path, func_part in matches:
+            # 清理檔案路徑
+            file_path = file_path.strip()
+            
+            # 提取函式名稱（可能有多個，用頓號或逗號分隔）
+            # 格式：map_patches()、read_text() 或 func1(), func2()
+            func_pattern = r'([a-zA-Z0-9_]+)\(\)'
+            function_names = re.findall(func_pattern, func_part)
+            
+            if file_path and function_names:
+                target = FunctionTarget(
+                    file_path=file_path,
+                    function_names=function_names
+                )
+                targets.append(target)
+                
+                self.logger.debug(f"  {file_path}: {', '.join(function_names)}")
+        
+        self.logger.info(f"從 prompt 中提取到 {len(targets)} 個檔案，共 {sum(len(t.function_names) for t in targets)} 個函式")
+        
+        return targets
     
     def scan_files(
         self, 
@@ -122,8 +183,8 @@ class CWEScanManager:
                 ))
                 continue
             
-            # 使用 CWEDetector 掃描單一檔案
-            vulnerabilities = self.detector.scan_single_file(full_path, cwe_type)
+            # 使用 CWEDetector 掃描單一檔案，傳入專案名稱
+            vulnerabilities = self.detector.scan_single_file(full_path, cwe_type, project_path.name)
             
             has_vuln = len(vulnerabilities) > 0
             
@@ -141,190 +202,263 @@ class CWEScanManager:
         
         return results
     
-    def save_scan_results(
+
+    
+    def _save_function_level_csv(
         self,
-        project_name: str,
-        cwe_type: str,
-        scan_results: List[ScanResult],
-        timestamp: datetime = None
-    ) -> Tuple[Path, Path]:
+        file_path: Path,
+        function_targets: List[FunctionTarget],
+        scan_results: Dict[str, ScanResult],
+        round_number: int = 0,
+        line_number: int = 0,
+        scanner_filter: str = None
+    ):
         """
-        儲存掃描結果到 CSV
+        儲存函式級別的掃描結果到 CSV
+        
+        每個函式一列，即使沒有漏洞也記錄
+        格式: 輪數,行號,檔案名稱_函式名稱,函式起始行,函式結束行,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
         
         Args:
-            project_name: 專案名稱
-            cwe_type: CWE 類型
-            scan_results: 掃描結果列表
-            timestamp: 時間戳記（可選）
-            
-        Returns:
-            Tuple[Path, Path]: (掃描結果檔案路徑, 統計檔案路徑)
-        """
-        if timestamp is None:
-            timestamp = datetime.now()
-        
-        # 建立 CWE 類型目錄
-        cwe_dir = self.output_dir / f"CWE-{cwe_type}"
-        cwe_dir.mkdir(parents=True, exist_ok=True)
-        
-        # 1. 儲存掃描詳細結果
-        scan_file = cwe_dir / f"{project_name}_scan.csv"
-        self._save_scan_detail_csv(scan_file, scan_results)
-        
-        # 2. 更新統計資料
-        statistics_file = cwe_dir / "statistics.csv"
-        self._update_statistics_csv(statistics_file, project_name, scan_results)
-        
-        self.logger.info(f"掃描結果已儲存:")
-        self.logger.info(f"  - 詳細結果: {scan_file}")
-        self.logger.info(f"  - 統計資料: {statistics_file}")
-        
-        return scan_file, statistics_file
-    
-    def _save_scan_detail_csv(self, file_path: Path, scan_results: List[ScanResult]):
-        """
-        儲存掃描詳細結果到 CSV
-        
-        格式:
-        檔案名稱,是否有CWE漏洞
-        app/backend/routes/storage.py,true
-        app/backend/routes/auth.py,false
+            file_path: CSV 檔案路徑
+            function_targets: 函式目標列表（從 prompt 提取）
+            scan_results: 掃描結果字典（key=file_path）
+            round_number: 輪數
+            line_number: 行號
+            scanner_filter: 掃描器過濾（'bandit' 或 'semgrep'），None 表示全部
         """
         with open(file_path, 'w', encoding='utf-8', newline='') as f:
             writer = csv.writer(f)
             
-            # 寫入標題
-            writer.writerow(['檔案名稱', '是否有CWE漏洞'])
+            # 寫入標題（新增"漏洞數量"、"掃描狀態"和"失敗原因"欄位）
+            writer.writerow([
+                '輪數',
+                '行號',
+                '檔案名稱_函式名稱',
+                '函式起始行',
+                '函式結束行',
+                '漏洞數量',
+                '漏洞行號',
+                '掃描器',
+                '信心度',
+                '嚴重性',
+                '問題描述',
+                '掃描狀態',
+                '失敗原因'
+            ])
             
-            # 寫入資料
-            for result in scan_results:
-                has_vuln = 'true' if result.has_vulnerability else 'false'
-                writer.writerow([result.file_path, has_vuln])
+            # 為每個目標函式寫一列
+            for target in function_targets:
+                file_result = scan_results.get(target.file_path)
+                
+                for func_name in target.function_names:
+                    func_key = f"{target.file_path}_{func_name}()"
+                    
+                    # 查找該函式的漏洞（可能有多個，來自不同掃描器）
+                    func_vulns = []
+                    func_start = ''
+                    func_end = ''
+                    scan_status = 'success'  # 預設成功
+                    failure_reason = ''
+                    
+                    if file_result and file_result.details:
+                        for vuln in file_result.details:
+                            # 檢查是否是掃描失敗記錄（line_start=0 且 scan_status=failed）
+                            if vuln.scan_status == 'failed':
+                                # 如果有掃描器過濾，檢查是否符合
+                                if scanner_filter is None or (vuln.scanner and vuln.scanner.value == scanner_filter):
+                                    scan_status = 'failed'
+                                    failure_reason = vuln.failure_reason or 'Unknown error'
+                                    # 不繼續處理其他漏洞
+                                    break
+                            elif vuln.function_name == func_name:
+                                # 如果有掃描器過濾，檢查是否符合
+                                if scanner_filter is None or (vuln.scanner and vuln.scanner.value == scanner_filter):
+                                    func_vulns.append(vuln)
+                                    if not func_start:
+                                        func_start = vuln.function_start or ''
+                                        func_end = vuln.function_end or ''
+                    
+                    if scan_status == 'failed':
+                        # 掃描失敗：記錄失敗資訊
+                        writer.writerow([
+                            round_number,
+                            line_number,
+                            func_key,
+                            '',  # 函式起始行
+                            '',  # 函式結束行
+                            '',  # 漏洞數量
+                            '',  # 漏洞行號
+                            scanner_filter or '',
+                            '',  # 信心度
+                            '',  # 嚴重性
+                            '',  # 問題描述
+                            'failed',
+                            failure_reason
+                        ])
+                    elif func_vulns:
+                        # 有漏洞：每個函式寫一列（已聚合）
+                        for vuln in func_vulns:
+                            # 格式化漏洞行號列表
+                            if vuln.all_vulnerability_lines and len(vuln.all_vulnerability_lines) > 1:
+                                # 多個漏洞行號，使用逗號分隔
+                                vuln_lines = ','.join(map(str, sorted(vuln.all_vulnerability_lines)))
+                            else:
+                                # 單個漏洞行號
+                                vuln_lines = str(vuln.line_start)
+                            
+                            writer.writerow([
+                                round_number,
+                                line_number,
+                                func_key,
+                                func_start,
+                                func_end,
+                                vuln.vulnerability_count or 1,  # 漏洞數量
+                                vuln_lines,  # 漏洞行號（可能是多個）
+                                vuln.scanner.value if vuln.scanner else '',
+                                vuln.confidence or '',
+                                vuln.severity or '',
+                                vuln.description or '',
+                                vuln.scan_status or 'success',
+                                vuln.failure_reason or ''
+                            ])
+                    else:
+                        # 沒有漏洞：也要記錄（作為實驗數據點）
+                        writer.writerow([
+                            round_number,
+                            line_number,
+                            func_key,
+                            func_start,
+                            func_end,
+                            0,  # 漏洞數量
+                            '',  # 漏洞行號
+                            scanner_filter or '',
+                            '',
+                            '',
+                            '',
+                            'success',
+                            ''
+                        ])
         
-        self.logger.debug(f"詳細掃描結果已寫入: {file_path}")
+        self.logger.debug(f"函式級別掃描結果已寫入: {file_path}")
     
-    def _update_statistics_csv(self, file_path: Path, project_name: str, scan_results: List[ScanResult]):
-        """
-        更新或建立統計 CSV 檔案
-        
-        格式:
-        專案名稱,不安全數量,安全數量,共計
-        project1,5,10,15
-        project2,2,8,10
-        總計,7,18,25
-        """
-        # 計算本次掃描統計
-        unsafe_count = sum(1 for r in scan_results if r.has_vulnerability)
-        safe_count = sum(1 for r in scan_results if not r.has_vulnerability)
-        total_count = len(scan_results)
-        
-        # 讀取現有資料
-        existing_data = []
-        if file_path.exists():
-            with open(file_path, 'r', encoding='utf-8', newline='') as f:
-                reader = csv.DictReader(f)
-                for row in reader:
-                    # 跳過總計行
-                    if row['專案名稱'] != '總計':
-                        existing_data.append(row)
-        
-        # 更新或追加專案資料
-        project_found = False
-        for row in existing_data:
-            if row['專案名稱'] == project_name:
-                # 更新現有專案的資料（追加模式）
-                row['不安全數量'] = str(int(row['不安全數量']) + unsafe_count)
-                row['安全數量'] = str(int(row['安全數量']) + safe_count)
-                row['共計'] = str(int(row['共計']) + total_count)
-                project_found = True
-                break
-        
-        if not project_found:
-            # 追加新專案
-            existing_data.append({
-                '專案名稱': project_name,
-                '不安全數量': str(unsafe_count),
-                '安全數量': str(safe_count),
-                '共計': str(total_count)
-            })
-        
-        # 計算總計
-        total_unsafe = sum(int(row['不安全數量']) for row in existing_data)
-        total_safe = sum(int(row['安全數量']) for row in existing_data)
-        total_all = sum(int(row['共計']) for row in existing_data)
-        
-        # 寫入檔案
-        with open(file_path, 'w', encoding='utf-8', newline='') as f:
-            writer = csv.writer(f)
-            
-            # 寫入標題
-            writer.writerow(['專案名稱', '不安全數量', '安全數量', '共計'])
-            
-            # 寫入專案資料
-            for row in existing_data:
-                writer.writerow([
-                    row['專案名稱'],
-                    row['不安全數量'],
-                    row['安全數量'],
-                    row['共計']
-                ])
-            
-            # 寫入總計行
-            writer.writerow(['總計', total_unsafe, total_safe, total_all])
-        
-        self.logger.debug(f"統計資料已更新: {file_path}")
-        self.logger.info(f"專案 {project_name}: 不安全={unsafe_count}, 安全={safe_count}, 共計={total_count}")
-    
-    def scan_from_prompt(
+    def scan_from_prompt_function_level(
         self,
         project_path: Path,
         project_name: str,
         prompt_content: str,
-        cwe_type: str
-    ) -> Tuple[bool, Optional[Tuple[Path, Path]]]:
+        cwe_type: str,
+        round_number: int = 0,
+        line_number: int = 0
+    ) -> Tuple[bool, Optional[Path]]:
         """
-        從 prompt 內容執行完整的掃描流程
+        從 prompt 內容執行函式級別的掃描流程
         
         Args:
             project_path: 專案路徑
             project_name: 專案名稱
             prompt_content: prompt 內容
             cwe_type: CWE 類型
+            round_number: 輪數（多輪互動時使用）
+            line_number: 行號（逐行掃描時使用）
             
         Returns:
-            Tuple[bool, Optional[Tuple[Path, Path]]]: (是否成功, (掃描結果檔案, 統計檔案))
+            Tuple[bool, Optional[Path]]: (是否成功, 掃描結果檔案路徑)
         """
         try:
-            self.logger.create_separator(f"CWE-{cwe_type} 掃描: {project_name}")
+            self.logger.create_separator(f"CWE-{cwe_type} 函式級別掃描: {project_name}")
             
-            # 步驟1: 從 prompt 提取檔案路徑
-            file_paths = self.extract_file_paths_from_prompt(prompt_content)
+            # 步驟1: 從 prompt 提取函式目標
+            function_targets = self.extract_function_targets_from_prompt(prompt_content)
             
-            if not file_paths:
-                self.logger.warning("未從 prompt 中提取到任何檔案路徑")
+            if not function_targets:
+                self.logger.warning("未從 prompt 中提取到任何函式目標")
                 return False, None
             
-            # 步驟2: 執行掃描
-            scan_results = self.scan_files(project_path, file_paths, cwe_type)
+            # 統計函式數量
+            total_functions = sum(len(t.function_names) for t in function_targets)
+            self.logger.info(f"提取到 {len(function_targets)} 個檔案，共 {total_functions} 個函式")
             
-            # 步驟3: 儲存結果
-            result_files = self.save_scan_results(project_name, cwe_type, scan_results)
+            # 步驟2: 收集需要掃描的檔案（去重）
+            unique_files = list(set(t.file_path for t in function_targets))
             
-            # 步驟4: 輸出摘要
-            total_files = len(scan_results)
-            unsafe_files = sum(1 for r in scan_results if r.has_vulnerability)
-            safe_files = total_files - unsafe_files
+            # 步驟3: 掃描檔案
+            scan_results_dict = {}
+            for file_path in unique_files:
+                full_path = project_path / file_path
+                
+                if not full_path.exists():
+                    self.logger.warning(f"檔案不存在: {file_path}")
+                    scan_results_dict[file_path] = ScanResult(
+                        file_path=file_path,
+                        has_vulnerability=False,
+                        vulnerability_count=0,
+                        details=[]
+                    )
+                    continue
+                
+                # 掃描檔案，傳入專案名稱
+                vulnerabilities = self.detector.scan_single_file(full_path, cwe_type, project_name)
+                
+                scan_results_dict[file_path] = ScanResult(
+                    file_path=file_path,
+                    has_vulnerability=len(vulnerabilities) > 0,
+                    vulnerability_count=len(vulnerabilities),
+                    details=vulnerabilities
+                )
+                
+                status = "發現漏洞" if vulnerabilities else "安全"
+                self.logger.info(f"  {file_path}: {status} ({len(vulnerabilities)} 個問題)")
             
-            self.logger.create_separator(f"掃描完成: {project_name}")
-            self.logger.info(f"掃描檔案數: {total_files}")
-            self.logger.info(f"發現漏洞: {unsafe_files} 個檔案")
-            self.logger.info(f"安全檔案: {safe_files} 個")
+            # 步驟4: 儲存函式級別結果（分離 Bandit 和 Semgrep）
+            cwe_dir = self.output_dir / f"CWE-{cwe_type}"
+            cwe_dir.mkdir(parents=True, exist_ok=True)
             
-            return True, result_files
+            # 建立子資料夾
+            bandit_dir = cwe_dir / "Bandit"
+            semgrep_dir = cwe_dir / "Semgrep"
+            bandit_dir.mkdir(parents=True, exist_ok=True)
+            semgrep_dir.mkdir(parents=True, exist_ok=True)
+            
+            # 儲存 Bandit 結果
+            bandit_file = bandit_dir / f"{project_name}_function_level_scan.csv"
+            self._save_function_level_csv(
+                file_path=bandit_file,
+                function_targets=function_targets,
+                scan_results=scan_results_dict,
+                round_number=round_number,
+                line_number=line_number,
+                scanner_filter='bandit'
+            )
+            
+            # 儲存 Semgrep 結果
+            semgrep_file = semgrep_dir / f"{project_name}_function_level_scan.csv"
+            self._save_function_level_csv(
+                file_path=semgrep_file,
+                function_targets=function_targets,
+                scan_results=scan_results_dict,
+                round_number=round_number,
+                line_number=line_number,
+                scanner_filter='semgrep'
+            )
+            
+            self.logger.info(f"✅ Bandit 結果: {bandit_file}")
+            self.logger.info(f"✅ Semgrep 結果: {semgrep_file}")
+            
+            # 步驟5: 輸出摘要
+            total_vulns = sum(r.vulnerability_count for r in scan_results_dict.values())
+            safe_funcs = total_functions - total_vulns
+            
+            self.logger.create_separator(f"函式級別掃描完成: {project_name}")
+            self.logger.info(f"掃描函式數: {total_functions}")
+            self.logger.info(f"發現漏洞: {total_vulns} 個函式")
+            self.logger.info(f"安全函式: {safe_funcs} 個")
+            
+            # 返回兩個檔案路徑（主要返回 Bandit，因為相容性）
+            return True, (bandit_file, semgrep_file)
             
         except Exception as e:
-            self.logger.error(f"掃描過程發生錯誤: {e}")
-            return False, None
+            self.logger.error(f"函式級別掃描過程發生錯誤: {e}", exc_info=True)
 
 
 # 全域實例

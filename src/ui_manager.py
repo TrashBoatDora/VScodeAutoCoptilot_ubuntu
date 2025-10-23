@@ -207,7 +207,16 @@ class UIManager:
     
     def clean_project_history(self, project_names: set) -> bool:
         """
-        清理指定專案的執行記錄和結果
+        清理指定專案的執行記錄和結果（直接刪除，不備份）
+        
+        清理範圍：
+        - ExecutionResult/Success/{專案名稱}/
+        - ExecutionResult/AutomationLog/{專案名稱}*.txt
+        - ExecutionResult/AutomationReport/{專案名稱}*.json
+        - CWE_Result/CWE-*/{專案名稱}*.csv
+        - CWE_Result/CWE-*/Bandit/{專案名稱}*.csv
+        - CWE_Result/CWE-*/Semgrep/{專案名稱}*.csv
+        - cwe_scan_results/CWE-*/{專案名稱}*.csv (舊版，如果存在)
         
         Args:
             project_names: 要清理的專案名稱集合
@@ -220,76 +229,124 @@ class UIManager:
         
         try:
             import shutil
-            from datetime import datetime
             
             script_root = Path(__file__).parent.parent
             
-            print(f"\n🧹 開始清理 {len(project_names)} 個專案的執行記錄...")
+            print(f"\n🧹 開始清理 {len(project_names)} 個專案的執行記錄（不備份）...")
             
-            # 要清理的目錄列表
-            cleanup_locations = []
+            # 統計清理數量
+            cleaned_count = 0
+            total_size = 0  # 釋放的空間（bytes）
             
             for project_name in project_names:
-                # ExecutionResult 相關
+                print(f"\n📂 清理專案: {project_name}")
+                
+                # 1. ExecutionResult/Success/{專案名稱}/
                 success_dir = script_root / "ExecutionResult" / "Success" / project_name
                 if success_dir.exists():
-                    cleanup_locations.append(("執行結果", success_dir))
+                    try:
+                        # 計算大小
+                        dir_size = sum(f.stat().st_size for f in success_dir.rglob('*') if f.is_file())
+                        total_size += dir_size
+                        
+                        shutil.rmtree(success_dir)
+                        print(f"  ✅ 已刪除執行結果目錄 ({dir_size / 1024:.2f} KB)")
+                        cleaned_count += 1
+                    except Exception as e:
+                        print(f"  ⚠️  刪除執行結果失敗: {e}")
                 
-                # AutomationLog
+                # 2. AutomationLog
                 log_dir = script_root / "ExecutionResult" / "AutomationLog"
                 if log_dir.exists():
                     for log_file in log_dir.glob(f"{project_name}*.txt"):
-                        cleanup_locations.append(("自動化日誌", log_file))
+                        try:
+                            file_size = log_file.stat().st_size
+                            total_size += file_size
+                            
+                            log_file.unlink()
+                            print(f"  ✅ 已刪除日誌: {log_file.name} ({file_size / 1024:.2f} KB)")
+                            cleaned_count += 1
+                        except Exception as e:
+                            print(f"  ⚠️  刪除日誌失敗: {log_file.name}: {e}")
                 
-                # CWE 掃描結果
+                # 3. AutomationReport
+                report_dir = script_root / "ExecutionResult" / "AutomationReport"
+                if report_dir.exists():
+                    for report_file in report_dir.glob(f"{project_name}*.json"):
+                        try:
+                            file_size = report_file.stat().st_size
+                            total_size += file_size
+                            
+                            report_file.unlink()
+                            print(f"  ✅ 已刪除報告: {report_file.name} ({file_size / 1024:.2f} KB)")
+                            cleaned_count += 1
+                        except Exception as e:
+                            print(f"  ⚠️  刪除報告失敗: {report_file.name}: {e}")
+                
+                # 4. CWE 掃描結果（支援新的 Bandit/Semgrep 分離結構）
                 cwe_result_dirs = [
                     script_root / "CWE_Result",
                     script_root / "cwe_scan_results"
                 ]
                 
                 for cwe_dir in cwe_result_dirs:
-                    if cwe_dir.exists():
-                        # 檢查所有 CWE 類型目錄
-                        for cwe_type_dir in cwe_dir.glob("CWE-*"):
-                            # 查找該專案的掃描結果
-                            for result_file in cwe_type_dir.glob(f"{project_name}*"):
-                                cleanup_locations.append(("CWE掃描結果", result_file))
-            
-            # 建立備份（可選）
-            if cleanup_locations:
-                timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-                backup_dir = script_root / f"backup_history_{timestamp}"
-                backup_dir.mkdir(exist_ok=True)
-                
-                print(f"📦 建立備份到: {backup_dir}")
-                
-                # 執行清理
-                cleaned_count = 0
-                for desc, path in cleanup_locations:
-                    try:
-                        # 備份
-                        if path.is_file():
-                            backup_path = backup_dir / desc / path.name
-                            backup_path.parent.mkdir(parents=True, exist_ok=True)
-                            shutil.copy2(path, backup_path)
-                            # 刪除
-                            path.unlink()
-                        elif path.is_dir():
-                            backup_path = backup_dir / desc / path.name
-                            backup_path.parent.mkdir(parents=True, exist_ok=True)
-                            shutil.copytree(path, backup_path)
-                            # 刪除
-                            shutil.rmtree(path)
+                    if not cwe_dir.exists():
+                        continue
+                    
+                    # 檢查所有 CWE 類型目錄
+                    for cwe_type_dir in cwe_dir.glob("CWE-*"):
+                        if not cwe_type_dir.is_dir():
+                            continue
                         
-                        print(f"  ✅ 已清理: {desc} - {path.name}")
-                        cleaned_count += 1
-                    except Exception as e:
-                        print(f"  ⚠️  清理失敗: {desc} - {path.name}: {e}")
-                
-                print(f"\n✅ 清理完成！共清理 {cleaned_count} 個項目")
-                print(f"📦 備份位置: {backup_dir}\n")
-            else:
-                print("ℹ️  沒有需要清理的記錄\n")
+                        # 清理根目錄的掃描結果（舊格式）
+                        for result_file in cwe_type_dir.glob(f"{project_name}*.csv"):
+                            try:
+                                file_size = result_file.stat().st_size
+                                total_size += file_size
+                                
+                                result_file.unlink()
+                                print(f"  ✅ 已刪除CWE掃描: {cwe_type_dir.name}/{result_file.name} ({file_size / 1024:.2f} KB)")
+                                cleaned_count += 1
+                            except Exception as e:
+                                print(f"  ⚠️  刪除CWE掃描失敗: {result_file.name}: {e}")
+                        
+                        # 清理 Bandit 子資料夾
+                        bandit_dir = cwe_type_dir / "Bandit"
+                        if bandit_dir.exists():
+                            for result_file in bandit_dir.glob(f"{project_name}*.csv"):
+                                try:
+                                    file_size = result_file.stat().st_size
+                                    total_size += file_size
+                                    
+                                    result_file.unlink()
+                                    print(f"  ✅ 已刪除Bandit結果: {cwe_type_dir.name}/Bandit/{result_file.name} ({file_size / 1024:.2f} KB)")
+                                    cleaned_count += 1
+                                except Exception as e:
+                                    print(f"  ⚠️  刪除Bandit結果失敗: {result_file.name}: {e}")
+                        
+                        # 清理 Semgrep 子資料夾
+                        semgrep_dir = cwe_type_dir / "Semgrep"
+                        if semgrep_dir.exists():
+                            for result_file in semgrep_dir.glob(f"{project_name}*.csv"):
+                                try:
+                                    file_size = result_file.stat().st_size
+                                    total_size += file_size
+                                    
+                                    result_file.unlink()
+                                    print(f"  ✅ 已刪除Semgrep結果: {cwe_type_dir.name}/Semgrep/{result_file.name} ({file_size / 1024:.2f} KB)")
+                                    cleaned_count += 1
+                                except Exception as e:
+                                    print(f"  ⚠️  刪除Semgrep結果失敗: {result_file.name}: {e}")
+            
+            # 輸出總結
+            print(f"\n{'='*60}")
+            print(f"✅ 清理完成！")
+            print(f"{'='*60}")
+            print(f"📊 清理統計:")
+            print(f"  - 已清理項目: {cleaned_count} 個")
+            print(f"  - 釋放空間: {total_size / 1024 / 1024:.2f} MB")
+            print(f"  - 清理專案: {len(project_names)} 個")
+            print(f"{'='*60}\n")
             
             return True
             

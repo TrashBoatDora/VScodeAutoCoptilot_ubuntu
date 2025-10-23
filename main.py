@@ -40,7 +40,12 @@ class HybridUIAutomationScript:
         self.project_manager = ProjectManager()
         self.vscode_controller = VSCodeController()
         self.error_handler = ErrorHandler()
-        self.copilot_handler = CopilotHandler(self.error_handler)  # 傳入 error_handler
+        self.copilot_handler = CopilotHandler(
+            self.error_handler, 
+            interaction_settings=None,
+            cwe_scan_manager=None,
+            cwe_scan_settings=None
+        )  # 初始化時傳入基本參數
         self.image_recognition = ImageRecognition()
         self.recovery_manager = RecoveryManager()
         self.ui_manager = UIManager()
@@ -158,9 +163,14 @@ class HybridUIAutomationScript:
                 self.logger.info("使用者取消了互動設定，結束腳本執行")
                 sys.exit(0)  # 直接退出腳本
             else:
-                # 儲存設定並重新初始化 CopilotHandler
+                # 儲存設定並重新初始化 CopilotHandler（加入 CWE 掃描參數）
                 self.interaction_settings = settings
-                self.copilot_handler = CopilotHandler(self.error_handler, settings)
+                self.copilot_handler = CopilotHandler(
+                    self.error_handler, 
+                    settings,
+                    self.cwe_scan_manager,
+                    self.cwe_scan_settings
+                )
                 self.logger.info(f"本次執行的互動設定: {settings}")
                 
         except Exception as e:
@@ -195,6 +205,11 @@ class HybridUIAutomationScript:
                     output_dir = Path(settings["output_dir"])
                     self.cwe_scan_manager = CWEScanManager(output_dir)
                     self.logger.info(f"✅ CWE 掃描已啟用 (類型: CWE-{settings['cwe_type']})")
+                    
+                    # 更新 CopilotHandler 的 CWE 掃描設定
+                    self.copilot_handler.cwe_scan_manager = self.cwe_scan_manager
+                    self.copilot_handler.cwe_scan_settings = self.cwe_scan_settings
+                    self.logger.info("✅ CopilotHandler 已更新 CWE 掃描設定")
                 else:
                     self.logger.info("ℹ️ CWE 掃描未啟用")
                 
@@ -402,9 +417,9 @@ class HybridUIAutomationScript:
             if self.error_handler.emergency_stop_requested:
                 raise AutomationError("收到中斷請求", ErrorType.USER_INTERRUPT)
             
-            # 步驟3.5: 執行 CWE 掃描（如果啟用）
+            # 步驟3.5: 執行 CWE 掃描（如果啟用）- 使用函式級別掃描
             if self.cwe_scan_settings and self.cwe_scan_settings["enabled"]:
-                project_logger.log("執行 CWE 漏洞掃描")
+                project_logger.log("執行 CWE 函式級別掃描")
                 self._execute_cwe_scan(project, project_logger)
             
             # 步驟4: 驗證結果
@@ -475,7 +490,7 @@ class HybridUIAutomationScript:
     
     def _execute_cwe_scan(self, project: ProjectInfo, project_logger) -> bool:
         """
-        執行 CWE 掃描
+        執行 CWE 函式級別掃描
         
         Args:
             project: 專案資訊
@@ -492,7 +507,7 @@ class HybridUIAutomationScript:
             project_name = Path(project.path).name
             cwe_type = self.cwe_scan_settings["cwe_type"]
             
-            self.logger.info(f"開始執行 CWE-{cwe_type} 掃描...")
+            self.logger.info(f"開始執行 CWE-{cwe_type} 函式級別掃描...")
             
             # 讀取專案的 prompt 檔案
             prompt_source_mode = self.interaction_settings.get(
@@ -518,23 +533,25 @@ class HybridUIAutomationScript:
             with open(prompt_file, 'r', encoding='utf-8') as f:
                 prompt_content = f.read()
             
-            # 執行掃描
-            success, result_files = self.cwe_scan_manager.scan_from_prompt(
+            # 執行函式級別掃描
+            # round_number=1 表示第一輪掃描
+            # line_number=0 表示一次性掃描整個 prompt 檔案（非逐行模式）
+            success, result_file = self.cwe_scan_manager.scan_from_prompt_function_level(
                 project_path=Path(project.path),
                 project_name=project_name,
                 prompt_content=prompt_content,
-                cwe_type=cwe_type
+                cwe_type=cwe_type,
+                round_number=1,
+                line_number=0
             )
             
             if success:
-                scan_file, stats_file = result_files
-                self.logger.info(f"✅ CWE 掃描完成")
-                self.logger.info(f"  掃描結果: {scan_file}")
-                self.logger.info(f"  統計資料: {stats_file}")
-                project_logger.log(f"CWE-{cwe_type} 掃描完成")
+                self.logger.info(f"✅ CWE 函式級別掃描完成")
+                self.logger.info(f"  掃描結果: {result_file}")
+                project_logger.log(f"CWE-{cwe_type} 函式級別掃描完成")
                 return True
             else:
-                self.logger.warning("CWE 掃描失敗")
+                self.logger.warning("CWE 函式級別掃描失敗")
                 return False
                 
         except Exception as e:

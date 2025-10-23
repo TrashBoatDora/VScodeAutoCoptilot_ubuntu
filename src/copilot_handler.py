@@ -3,6 +3,7 @@
 Hybrid UI Automation Script - Copilot Chat 操作模組
 處理開啟 Chat、發送提示、等待回應、複製結果等操作
 完全使用鍵盤操作，無需圖像識別
+支援 Rate Limit 檢測和自動重試機制
 """
 
 import pyautogui
@@ -27,23 +28,57 @@ except ImportError:
 try:
     from src.logger import get_logger
     from src.image_recognition import image_recognition
+    from src.copilot_rate_limit_handler import (
+        is_response_incomplete,
+        wait_and_retry
+    )
 except ImportError:
     from logger import get_logger
     from image_recognition import image_recognition
+    from copilot_rate_limit_handler import (
+        is_response_incomplete,
+        wait_and_retry
+    )
 
 class CopilotHandler:
     """Copilot Chat 操作處理器"""
+    COMPLETION_INSTRUCTION = '【重要】除了寫程式外，不要執行其餘操作，一次就回答完成，並且在回答完成後，最後一行加上「已完成回答」'
     
-    def __init__(self, error_handler=None, interaction_settings=None):
-        """初始化 Copilot 處理器"""
+    def __init__(self, error_handler=None, interaction_settings=None, cwe_scan_manager=None, cwe_scan_settings=None):
+        """
+        初始化 Copilot 處理器
+        
+        Args:
+            error_handler: 錯誤處理器
+            interaction_settings: 互動設定
+            cwe_scan_manager: CWE 掃描管理器
+            cwe_scan_settings: CWE 掃描設定
+        """
         self.logger = get_logger("CopilotHandler")
         self.is_chat_open = False
         self.last_response = ""
+        self.last_sent_prompt = ""
         self.error_handler = error_handler  # 添加 error_handler 引用
         self.image_recognition = image_recognition  # 添加圖像識別引用
         self.interaction_settings = interaction_settings  # 添加外部設定支援
+        self.cwe_scan_manager = cwe_scan_manager  # CWE 掃描管理器
+        self.cwe_scan_settings = cwe_scan_settings  # CWE 掃描設定
         self._clipboard_lock = False  # 剪貼簿鎖定狀態，避免併發衝突
+        
         self.logger.info("Copilot Chat 處理器初始化完成")
+        if cwe_scan_manager and cwe_scan_settings and cwe_scan_settings.get("enabled"):
+            self.logger.info(f"✅ CWE 掃描已啟用 (類型: CWE-{cwe_scan_settings.get('cwe_type')})")
+
+    def _ensure_completion_instruction(self, prompt: str) -> str:
+        """確保提示詞包含完成回報指示"""
+        instruction = self.COMPLETION_INSTRUCTION
+        if not prompt:
+            return instruction
+        if instruction in prompt:
+            return prompt
+        if prompt.endswith("\n"):
+            return f"{prompt}{instruction}"
+        return f"{prompt}\n\n{instruction}"
     
     def _send_prompt_with_content(self, prompt_content: str, line_number: int, total_lines: int) -> bool:
         """
@@ -58,15 +93,18 @@ class CopilotHandler:
             bool: 發送是否成功
         """
         try:
+            prompt_to_send = self._ensure_completion_instruction(prompt_content)
+            self.last_sent_prompt = prompt_to_send
+
             self.logger.info(f"發送第 {line_number}/{total_lines} 行提示詞...")
             
             # 截斷過長的內容用於日誌顯示
-            display_content = prompt_content[:100] + "..." if len(prompt_content) > 100 else prompt_content
+            display_content = prompt_to_send[:100] + "..." if len(prompt_to_send) > 100 else prompt_to_send
             self.logger.debug(f"內容預覽: {display_content}")
-            self.logger.debug(f"完整內容長度: {len(prompt_content)} 字元")
+            self.logger.debug(f"完整內容長度: {len(prompt_to_send)} 字元")
             
             # 使用安全的剪貼簿複製
-            if not self._safe_clipboard_copy(prompt_content, f"第 {line_number} 行完整提示詞"):
+            if not self._safe_clipboard_copy(prompt_to_send, f"第 {line_number} 行完整提示詞"):
                 self.logger.error(f"無法複製第 {line_number} 行完整提示詞到剪貼簿")
                 return False
             
@@ -84,7 +122,7 @@ class CopilotHandler:
             pyautogui.press('enter')
             time.sleep(1)
             
-            self.logger.copilot_interaction(f"發送第 {line_number} 行", "SUCCESS", f"長度: {len(prompt_content)} 字元")
+            self.logger.copilot_interaction(f"發送第 {line_number} 行", "SUCCESS", f"長度: {len(prompt_to_send)} 字元")
             return True
             
         except Exception as e:
@@ -275,11 +313,14 @@ class CopilotHandler:
             bool: 發送是否成功
         """
         try:
+            prompt_to_send = self._ensure_completion_instruction(prompt_line)
+            self.last_sent_prompt = prompt_to_send
+
             self.logger.info(f"發送第 {line_number}/{total_lines} 行提示詞...")
-            self.logger.debug(f"內容: {prompt_line[:100]}...")
+            self.logger.debug(f"內容: {(prompt_to_send[:100] + '...') if len(prompt_to_send) > 100 else prompt_to_send}")
             
             # 使用安全的剪貼簿複製
-            if not self._safe_clipboard_copy(prompt_line, f"第 {line_number} 行提示詞"):
+            if not self._safe_clipboard_copy(prompt_to_send, f"第 {line_number} 行提示詞"):
                 self.logger.error(f"無法複製第 {line_number} 行提示詞到剪貼簿")
                 return False
             
@@ -299,7 +340,7 @@ class CopilotHandler:
             
             self.is_chat_open = True
             self.logger.copilot_interaction(f"發送第 {line_number} 行提示詞", "SUCCESS", 
-                                          f"長度: {len(prompt_line)} 字元")
+                                          f"長度: {len(prompt_to_send)} 字元")
             return True
             
         except Exception as e:
@@ -576,6 +617,7 @@ class CopilotHandler:
             # 創建檔案並寫入內容  
             prompt_text = kwargs.get('prompt_text', "使用預設提示詞")
             actual_sent_prompt = kwargs.get('actual_sent_prompt', None)  # 實際發送的完整內容
+            retry_count = kwargs.get('retry_count', 0)  # 重試次數
             
             with open(output_file, 'w', encoding='utf-8') as f:
                 f.write("# Copilot 自動補全記錄\n")
@@ -588,6 +630,10 @@ class CopilotHandler:
                 if line_number is not None:
                     total_lines = kwargs.get('total_lines', '?')
                     f.write(f"# 提示詞行號: 第 {line_number}/{total_lines} 行\n")
+                
+                # 記錄重試信息
+                if retry_count > 0:
+                    f.write(f"# 重試次數: {retry_count}\n")
                 
                 f.write(f"# 執行狀態: {'成功' if is_success else '失敗'}\n")
                 f.write("=" * 50 + "\n\n")
@@ -670,80 +716,126 @@ class CopilotHandler:
             
             # 逐行處理
             for line_num, original_prompt_line in enumerate(prompt_lines, 1):
-                try:
-                    self.logger.info(f"處理第 {line_num}/{total_lines} 行...")
-                    
-                    # 準備當前要發送的提示詞
-                    if include_previous_response and accumulated_response and line_num > 1:
-                        # 串接模式：將累積回應加到當前提示詞前面
-                        current_prompt = f"{accumulated_response}\n{original_prompt_line}"
-                        self.logger.info(f"📎 串接模式：將前面的回應(長度: {len(accumulated_response)} 字元)串接到第 {line_num} 行")
-                    else:
-                        # 第一行或未啟用串接：直接使用原始提示詞
-                        current_prompt = original_prompt_line
-                        if line_num == 1:
-                            self.logger.info(f"🚀 第一行：使用原始提示詞")
-                    
-                    # 步驟2: 發送當前提示詞（可能包含串接內容）
-                    if not self._send_prompt_with_content(current_prompt, line_num, total_lines):
-                        error_msg = f"第 {line_num} 行：無法發送提示詞"
-                        failed_lines.append(error_msg)
-                        self.logger.error(error_msg)
-                        continue
-                    
-                    # 步驟3: 等待回應
-                    if not self.wait_for_response(use_smart_wait=use_smart_wait):
-                        error_msg = f"第 {line_num} 行：等待回應超時"
-                        failed_lines.append(error_msg)
-                        self.logger.error(error_msg)
-                        continue
-                    
-                    # 步驟4: 複製回應
-                    response = self.copy_response()
-                    if not response:
-                        error_msg = f"第 {line_num} 行：無法複製回應內容"
-                        failed_lines.append(error_msg)
-                        self.logger.error(error_msg)
-                        continue
-                    
-                    # 步驟5: 如果啟用串接功能，更新累積回應
-                    if include_previous_response:
-                        accumulated_response = response.strip()
-                        self.logger.debug(f"💾 累積回應已更新 (長度: {len(accumulated_response)} 字元)")
-                    
-                    # 步驟6: 儲存到檔案（記錄原始提示詞和實際發送內容）
-                    if not self.save_response_to_file(
-                        project_path, 
-                        response, 
-                        is_success=True, 
-                        round_number=round_number,
-                        line_number=line_num,
-                        total_lines=total_lines,
-                        prompt_text=original_prompt_line,
-                        actual_sent_prompt=current_prompt  # 記錄實際發送的內容
-                    ):
-                        error_msg = f"第 {line_num} 行：無法儲存回應到檔案"
-                        failed_lines.append(error_msg)
-                        self.logger.error(error_msg)
-                        continue
-                    
-                    successful_lines += 1
-                    self.logger.info(f"✅ 第 {line_num}/{total_lines} 行處理成功")
-                    
-                    # 行之間的停頓（copy_response 已經聚焦回輸入框）
-                    if line_num < total_lines:  # 不是最後一行
-                        self.logger.debug(f"準備處理下一行 ({line_num + 1}/{total_lines})...")
-                        time.sleep(1.5)  # 稍長的停頓確保狀態穩定
-                    else:
-                        self.logger.info("所有行處理完成")
+                line_success = False
+                retry_count = 0
+                
+                # 持續重試直到成功
+                while not line_success:
+                    try:
+                        if retry_count > 0:
+                            self.logger.info(f"🔄 重試第 {line_num}/{total_lines} 行 (第 {retry_count} 次重試)...")
+                        else:
+                            self.logger.info(f"處理第 {line_num}/{total_lines} 行...")
+                        
+                        # 準備當前要發送的提示詞
+                        if include_previous_response and accumulated_response and line_num > 1:
+                            current_prompt = f"{accumulated_response}\n{original_prompt_line}"
+                            self.logger.info(f"📎 串接模式：將前面的回應(長度: {len(accumulated_response)} 字元)串接到第 {line_num} 行")
+                        else:
+                            current_prompt = original_prompt_line
+                            if line_num == 1:
+                                self.logger.info(f"🚀 第一行：使用原始提示詞")
+                        
+                        # 發送提示詞
+                        if not self._send_prompt_with_content(current_prompt, line_num, total_lines):
+                            error_msg = f"第 {line_num} 行：無法發送提示詞"
+                            failed_lines.append(error_msg)
+                            self.logger.error(error_msg)
+                            break
+                        
+                        # 等待回應
+                        if not self.wait_for_response(use_smart_wait=use_smart_wait):
+                            error_msg = f"第 {line_num} 行：等待回應超時"
+                            failed_lines.append(error_msg)
+                            self.logger.error(error_msg)
+                            break
+                        
+                        # 複製回應
+                        response = self.copy_response()
+                        if not response:
+                            error_msg = f"第 {line_num} 行：無法複製回應內容"
+                            failed_lines.append(error_msg)
+                            self.logger.error(error_msg)
+                            break
+                        
+                        # 檢查回應完整性
+                        if is_response_incomplete(response):
+                            self.logger.warning(f"⚠️  第 {line_num} 行回應不完整，將等待後重試")
+                            retry_count += 1
+                            
+                            # 等待 30 分鐘
+                            wait_and_retry(1800, line_num, round_number, self.logger, retry_count)
+                            
+                            # 清空輸入框準備重試
+                            pyautogui.hotkey('ctrl', 'f1')
+                            time.sleep(0.5)
+                            pyautogui.hotkey('ctrl', 'a')
+                            time.sleep(0.2)
+                            pyautogui.press('delete')
+                            time.sleep(0.5)
+                            
+                            continue  # 繼續重試循環
+                        
+                        # 回應完整，繼續處理
+                        self.logger.info(f"✅ 第 {line_num} 行回應完整")
+                        
+                        # 更新累積回應
                         if include_previous_response:
-                            self.logger.info(f"🎯 累積串接處理完成，最終累積回應長度: {len(accumulated_response)} 字元")
-                        time.sleep(1)
-                    
-                except Exception as e:
-                    error_msg = f"第 {line_num} 行處理失敗: {str(e)}"
-                    failed_lines.append(error_msg)
-                    self.logger.error(error_msg)
+                            accumulated_response = response.strip()
+                            self.logger.debug(f"💾 累積回應已更新 (長度: {len(accumulated_response)} 字元)")
+                        
+                        # 儲存到檔案
+                        actual_sent_prompt = self.last_sent_prompt or current_prompt
+
+                        if not self.save_response_to_file(
+                            project_path, 
+                            response, 
+                            is_success=True, 
+                            round_number=round_number,
+                            line_number=line_num,
+                            total_lines=total_lines,
+                            prompt_text=original_prompt_line,
+                            actual_sent_prompt=actual_sent_prompt,
+                            retry_count=retry_count
+                        ):
+                            error_msg = f"第 {line_num} 行：無法儲存回應到檔案"
+                            failed_lines.append(error_msg)
+                            self.logger.error(error_msg)
+                            break
+                        
+                        # 執行 CWE 掃描（如果啟用）
+                        if self.cwe_scan_manager and self.cwe_scan_settings and self.cwe_scan_settings.get("enabled"):
+                            self.logger.info(f"🔍 開始對第 {line_num} 行的回應進行 CWE 掃描...")
+                            scan_success = self._perform_cwe_scan_for_prompt(
+                                project_path=project_path,
+                                prompt_line=original_prompt_line,
+                                line_number=line_num,
+                                round_number=round_number
+                            )
+                            if scan_success:
+                                self.logger.info(f"✅ 第 {line_num} 行 CWE 掃描完成")
+                            else:
+                                self.logger.warning(f"⚠️  第 {line_num} 行 CWE 掃描失敗（繼續執行）")
+                        
+                        successful_lines += 1
+                        line_success = True
+                        self.logger.info(f"✅ 第 {line_num}/{total_lines} 行處理成功" + (f" (經過 {retry_count} 次重試)" if retry_count > 0 else ""))
+                        
+                        # 行之間的停頓
+                        if line_num < total_lines:
+                            self.logger.debug(f"準備處理下一行 ({line_num + 1}/{total_lines})...")
+                            time.sleep(1.5)
+                        else:
+                            self.logger.info("所有行處理完成")
+                            if include_previous_response:
+                                self.logger.info(f"🎯 累積串接處理完成，最終累積回應長度: {len(accumulated_response)} 字元")
+                            time.sleep(1)
+                        
+                    except Exception as e:
+                        error_msg = f"第 {line_num} 行處理失敗: {str(e)}"
+                        failed_lines.append(error_msg)
+                        self.logger.error(error_msg)
+                        break
             
             # 處理完成
             self.logger.create_separator(f"專案 {project_name} 第 {round_number} 輪處理完成")
@@ -1285,6 +1377,52 @@ class CopilotHandler:
                 
         except Exception as e:
             self.logger.error(f"專案互動處理出錯: {str(e)}")
+            return False
+    
+    def _perform_cwe_scan_for_prompt(
+        self, 
+        project_path: str, 
+        prompt_line: str, 
+        line_number: int,
+        round_number: int
+    ) -> bool:
+        """
+        對單行 prompt 進行 CWE 函式級別掃描
+        
+        Args:
+            project_path: 專案路徑
+            prompt_line: 當前的 prompt 行內容
+            line_number: 行號
+            round_number: 輪數
+            
+        Returns:
+            bool: 掃描是否成功
+        """
+        try:
+            project_name = Path(project_path).name
+            cwe_type = self.cwe_scan_settings.get("cwe_type", "022")
+            
+            self.logger.debug(f"開始 CWE-{cwe_type} 函式級別掃描: 第 {round_number} 輪 / 第 {line_number} 行")
+            
+            # 使用函式級別掃描
+            success, result_file = self.cwe_scan_manager.scan_from_prompt_function_level(
+                project_path=Path(project_path),
+                project_name=project_name,
+                prompt_content=prompt_line,
+                cwe_type=cwe_type,
+                round_number=round_number,
+                line_number=line_number
+            )
+            
+            if not success:
+                self.logger.warning(f"第 {line_number} 行函式級別掃描失敗")
+                return False
+            
+            self.logger.info(f"✅ 第 {line_number} 行函式級別掃描完成")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"CWE 函式級別掃描執行失敗: {e}", exc_info=True)
             return False
 
 # 創建全域實例

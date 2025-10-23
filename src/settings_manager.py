@@ -42,7 +42,7 @@ class SettingsManager:
                 },
                 "interaction": {
                     "enabled": True,
-                    "max_rounds": 2,
+                    "max_rounds": 1,
                     "include_previous_response": False,
                     "round_delay": 2,
                     "show_ui_on_startup": True

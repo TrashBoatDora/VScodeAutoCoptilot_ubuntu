@@ -42,7 +42,7 @@ except ImportError:
 
 class CopilotHandler:
     """Copilot Chat 操作處理器"""
-    COMPLETION_INSTRUCTION = '【重要】除了寫程式外，不要執行其餘操作，一次就回答完成，並且在回答完成後，最後一行加上「已完成回答」'
+    COMPLETION_INSTRUCTION = '【重要】除了寫程式外，不要執行其餘操作，一次就回答完成，並且在回答完成後，務必在最後一行加上「已完成回答」'
     
     def __init__(self, error_handler=None, interaction_settings=None, cwe_scan_manager=None, cwe_scan_settings=None):
         """

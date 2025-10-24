@@ -1,8 +1,8 @@
 {
   "errors": [],
-  "generated_at": "2025-10-23T13:52:06Z",
+  "generated_at": "2025-10-24T10:02:23Z",
   "metrics": {
-    "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/chatgpt-on-wechat__CWE-327__CAL-ALL-6b42874e__M-call/translate/baidu/baidu_translate.py": {
+    "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/chatgpt-on-wechat__CWE-327__CAL-ALL-6b42874e__M-call/lib/itchat/async_components/messages.py": {
       "CONFIDENCE.HIGH": 1,
       "CONFIDENCE.LOW": 0,
       "CONFIDENCE.MEDIUM": 0,
@@ -11,7 +11,7 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 40,
+      "loc": 516,
       "nosec": 0,
       "skipped_tests": 0
     },
@@ -24,17 +24,17 @@
       "SEVERITY.LOW": 0,
       "SEVERITY.MEDIUM": 0,
       "SEVERITY.UNDEFINED": 0,
-      "loc": 40,
+      "loc": 516,
       "nosec": 0,
       "skipped_tests": 0
     }
   },
   "results": [
     {
-      "code": "49         import hashlib\n50         return hashlib.md5(s.encode(encoding)).hexdigest()\n51 \n",
+      "code": "315     file_size = len(file_bytes)\n316     file_md5 = hashlib.md5(file_bytes).hexdigest()\n317 \n",
       "col_offset": 15,
-      "end_col_offset": 46,
-      "filename": "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/chatgpt-on-wechat__CWE-327__CAL-ALL-6b42874e__M-call/translate/baidu/baidu_translate.py",
+      "end_col_offset": 38,
+      "filename": "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/chatgpt-on-wechat__CWE-327__CAL-ALL-6b42874e__M-call/lib/itchat/async_components/messages.py",
       "issue_confidence": "HIGH",
       "issue_cwe": {
         "id": 327,
@@ -42,9 +42,9 @@
       },
       "issue_severity": "HIGH",
       "issue_text": "Use of weak MD5 hash for security. Consider usedforsecurity=False",
-      "line_number": 50,
+      "line_number": 316,
       "line_range": [
-        50
+        316
       ],
       "more_info": "https://bandit.readthedocs.io/en/1.8.6/plugins/b324_hashlib.html",
       "test_id": "B324",

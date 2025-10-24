@@ -1,17 +1,5 @@
 # VS Code Copilot 自動互動系統
 
-## ✨ 最新更新
-
-### 🔥 Rate Limit 自動處理機制（2025-10-15）
-- ✅ **自動檢測**：識別 Copilot 回應是否完整
-- ✅ **智能重試**：遇到 rate limit 自動暫停並重試
-- ✅ **指數退避**：重試等待時間自動遞增
-- ✅ **零配置**：無需修改代碼，直接使用
-- 📖 **快速上手**：[RATE_LIMIT_QUICKSTART.md](RATE_LIMIT_QUICKSTART.md)
-- � **詳細指南**：[RATE_LIMIT_INTEGRATION_GUIDE.md](RATE_LIMIT_INTEGRATION_GUIDE.md)
-
-## �🚀 快速開始
-
 ### 系統需求
 - **作業系統**: Ubuntu 20.04+ / Linux（建議使用 Ubuntu 20.04 LTS）
 - **Python**: 3.10.12 或更高版本（必須使用 conda 環境 `copilot_py310`）

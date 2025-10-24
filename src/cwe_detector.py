@@ -936,7 +936,8 @@ class CWEDetector:
         self,
         file_path: Path,
         cwe: str,
-        project_name: str = None
+        project_name: str = None,
+        round_number: int = 1
     ) -> List[CWEVulnerability]:
         """
         掃描單一檔案
@@ -945,6 +946,7 @@ class CWEDetector:
             file_path: 檔案路徑
             cwe: CWE ID
             project_name: 專案名稱（如果提供，結果會儲存在該專案目錄下；否則儲存在 single_file 目錄）
+            round_number: 互動輪數（預設為 1）
             
         Returns:
             List[CWEVulnerability]: 漏洞列表
@@ -953,7 +955,7 @@ class CWEDetector:
             logger.error(f"檔案不存在: {file_path}")
             return []
         
-        logger.info(f"掃描單一檔案: {file_path} (CWE-{cwe})")
+        logger.info(f"掃描單一檔案: {file_path} (CWE-{cwe}, 第{round_number}輪)")
         
         all_vulns = []
         
@@ -961,13 +963,15 @@ class CWEDetector:
         if ScannerType.BANDIT in self.available_scanners and cwe in self.BANDIT_BY_CWE:
             tests = self.BANDIT_BY_CWE[cwe]
             
-            # 確定輸出目錄：如果有專案名稱，使用專案目錄；否則使用 single_file 目錄
+            # 確定輸出目錄：新結構包含輪數資料夾
             if project_name:
-                # 儲存在專案目錄下: OriginalScanResult/Bandit/CWE-{cwe}/{project_name}/
-                output_dir = self.bandit_original_dir / f"CWE-{cwe}" / project_name
+                # 儲存在專案目錄下: OriginalScanResult/Bandit/CWE-{cwe}/{project_name}/第N輪/
+                round_folder = f"第{round_number}輪"
+                output_dir = self.bandit_original_dir / f"CWE-{cwe}" / project_name / round_folder
             else:
-                # 儲存在 single_file 目錄: OriginalScanResult/Bandit/single_file/CWE-{cwe}/
-                output_dir = self.bandit_original_dir / "single_file" / f"CWE-{cwe}"
+                # 儲存在 single_file 目錄: OriginalScanResult/Bandit/single_file/CWE-{cwe}/第N輪/
+                round_folder = f"第{round_number}輪"
+                output_dir = self.bandit_original_dir / "single_file" / f"CWE-{cwe}" / round_folder
             
             output_dir.mkdir(parents=True, exist_ok=True)
             
@@ -1010,13 +1014,15 @@ class CWEDetector:
                 # Semgrep 單檔掃描也需要使用目錄前綴命名
                 rule_patterns = self.SEMGREP_BY_CWE.get(cwe)
                 if rule_patterns:
-                    # 確定輸出目錄：如果有專案名稱，使用專案目錄；否則使用 single_file 目錄
+                    # 確定輸出目錄：新結構包含輪數資料夾
                     if project_name:
-                        # 儲存在專案目錄下: OriginalScanResult/Semgrep/CWE-{cwe}/{project_name}/
-                        output_dir = self.semgrep_original_dir / f"CWE-{cwe}" / project_name
+                        # 儲存在專案目錄下: OriginalScanResult/Semgrep/CWE-{cwe}/{project_name}/第N輪/
+                        round_folder = f"第{round_number}輪"
+                        output_dir = self.semgrep_original_dir / f"CWE-{cwe}" / project_name / round_folder
                     else:
-                        # 儲存在 single_file 目錄: OriginalScanResult/Semgrep/single_file/CWE-{cwe}/
-                        output_dir = self.semgrep_original_dir / "single_file" / f"CWE-{cwe}"
+                        # 儲存在 single_file 目錄: OriginalScanResult/Semgrep/single_file/CWE-{cwe}/第N輪/
+                        round_folder = f"第{round_number}輪"
+                        output_dir = self.semgrep_original_dir / "single_file" / f"CWE-{cwe}" / round_folder
                     
                     output_dir.mkdir(parents=True, exist_ok=True)
                     

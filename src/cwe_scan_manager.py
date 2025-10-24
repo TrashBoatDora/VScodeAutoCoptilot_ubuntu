@@ -211,7 +211,8 @@ class CWEScanManager:
         scan_results: Dict[str, ScanResult],
         round_number: int = 0,
         line_number: int = 0,
-        scanner_filter: str = None
+        scanner_filter: str = None,
+        append_mode: bool = False
     ):
         """
         儲存函式級別的掃描結果到 CSV
@@ -226,26 +227,34 @@ class CWEScanManager:
             round_number: 輪數
             line_number: 行號
             scanner_filter: 掃描器過濾（'bandit' 或 'semgrep'），None 表示全部
+            append_mode: 是否使用追加模式（True: 追加，False: 覆寫）
         """
-        with open(file_path, 'w', encoding='utf-8', newline='') as f:
+        # 判斷是否需要寫入標題列（檔案不存在或非追加模式時寫入）
+        write_header = not append_mode or not file_path.exists()
+        
+        # 根據模式選擇開啟方式
+        mode = 'a' if append_mode else 'w'
+        
+        with open(file_path, mode, encoding='utf-8', newline='') as f:
             writer = csv.writer(f)
             
-            # 寫入標題（新增"漏洞數量"、"掃描狀態"和"失敗原因"欄位）
-            writer.writerow([
-                '輪數',
-                '行號',
-                '檔案名稱_函式名稱',
-                '函式起始行',
-                '函式結束行',
-                '漏洞數量',
-                '漏洞行號',
-                '掃描器',
-                '信心度',
-                '嚴重性',
-                '問題描述',
-                '掃描狀態',
-                '失敗原因'
-            ])
+            # 寫入標題（僅在需要時）
+            if write_header:
+                writer.writerow([
+                    '輪數',
+                    '行號',
+                    '檔案名稱_函式名稱',
+                    '函式起始行',
+                    '函式結束行',
+                    '漏洞數量',
+                    '漏洞行號',
+                    '掃描器',
+                    '信心度',
+                    '嚴重性',
+                    '問題描述',
+                    '掃描狀態',
+                    '失敗原因'
+                ])
             
             # 為每個目標函式寫一列
             for target in function_targets:
@@ -397,8 +406,13 @@ class CWEScanManager:
                     )
                     continue
                 
-                # 掃描檔案，傳入專案名稱
-                vulnerabilities = self.detector.scan_single_file(full_path, cwe_type, project_name)
+                # 掃描檔案，傳入專案名稱和輪數
+                vulnerabilities = self.detector.scan_single_file(
+                    full_path, 
+                    cwe_type, 
+                    project_name, 
+                    round_number
+                )
                 
                 scan_results_dict[file_path] = ScanResult(
                     file_path=file_path,
@@ -411,39 +425,61 @@ class CWEScanManager:
                 self.logger.info(f"  {file_path}: {status} ({len(vulnerabilities)} 個問題)")
             
             # 步驟4: 儲存函式級別結果（分離 Bandit 和 Semgrep）
+            # 新結構：CWE-{cwe}/Bandit/{project}/第N輪/
             cwe_dir = self.output_dir / f"CWE-{cwe_type}"
             cwe_dir.mkdir(parents=True, exist_ok=True)
             
-            # 建立子資料夾
-            bandit_dir = cwe_dir / "Bandit"
-            semgrep_dir = cwe_dir / "Semgrep"
-            bandit_dir.mkdir(parents=True, exist_ok=True)
-            semgrep_dir.mkdir(parents=True, exist_ok=True)
+            # 建立掃描器目錄
+            bandit_base_dir = cwe_dir / "Bandit"
+            semgrep_base_dir = cwe_dir / "Semgrep"
+            bandit_base_dir.mkdir(parents=True, exist_ok=True)
+            semgrep_base_dir.mkdir(parents=True, exist_ok=True)
+            
+            # 建立專案目錄
+            bandit_project_dir = bandit_base_dir / project_name
+            semgrep_project_dir = semgrep_base_dir / project_name
+            bandit_project_dir.mkdir(parents=True, exist_ok=True)
+            semgrep_project_dir.mkdir(parents=True, exist_ok=True)
+            
+            # 建立輪數目錄
+            round_folder_name = f"第{round_number}輪"
+            bandit_round_dir = bandit_project_dir / round_folder_name
+            semgrep_round_dir = semgrep_project_dir / round_folder_name
+            bandit_round_dir.mkdir(parents=True, exist_ok=True)
+            semgrep_round_dir.mkdir(parents=True, exist_ok=True)
+            
+            # 檔案路徑
+            bandit_file = bandit_round_dir / f"{project_name}_function_level_scan.csv"
+            semgrep_file = semgrep_round_dir / f"{project_name}_function_level_scan.csv"
+            
+            # 判斷是否使用追加模式（line_number > 1 表示不是第一行）
+            append_mode = line_number > 1
             
             # 儲存 Bandit 結果
-            bandit_file = bandit_dir / f"{project_name}_function_level_scan.csv"
             self._save_function_level_csv(
                 file_path=bandit_file,
                 function_targets=function_targets,
                 scan_results=scan_results_dict,
                 round_number=round_number,
                 line_number=line_number,
-                scanner_filter='bandit'
+                scanner_filter='bandit',
+                append_mode=append_mode
             )
             
             # 儲存 Semgrep 結果
-            semgrep_file = semgrep_dir / f"{project_name}_function_level_scan.csv"
             self._save_function_level_csv(
                 file_path=semgrep_file,
                 function_targets=function_targets,
                 scan_results=scan_results_dict,
                 round_number=round_number,
                 line_number=line_number,
-                scanner_filter='semgrep'
+                scanner_filter='semgrep',
+                append_mode=append_mode
             )
             
-            self.logger.info(f"✅ Bandit 結果: {bandit_file}")
-            self.logger.info(f"✅ Semgrep 結果: {semgrep_file}")
+            mode_msg = "追加" if append_mode else "覆寫"
+            self.logger.info(f"✅ Bandit 結果 ({mode_msg}): {bandit_file}")
+            self.logger.info(f"✅ Semgrep 結果 ({mode_msg}): {semgrep_file}")
             
             # 步驟5: 輸出摘要
             total_vulns = sum(r.vulnerability_count for r in scan_results_dict.values())

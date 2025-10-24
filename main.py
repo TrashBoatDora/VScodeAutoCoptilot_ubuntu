@@ -417,10 +417,8 @@ class HybridUIAutomationScript:
             if self.error_handler.emergency_stop_requested:
                 raise AutomationError("收到中斷請求", ErrorType.USER_INTERRUPT)
             
-            # 步驟3.5: 執行 CWE 掃描（如果啟用）- 使用函式級別掃描
-            if self.cwe_scan_settings and self.cwe_scan_settings["enabled"]:
-                project_logger.log("執行 CWE 函式級別掃描")
-                self._execute_cwe_scan(project, project_logger)
+            # 步驟3.5: CWE 掃描已在 Copilot 互動期間執行（copilot_handler.py 中的 _perform_cwe_scan_for_prompt）
+            # 不需要在此處再次執行掃描，避免重複和誤導
             
             # 步驟4: 驗證結果
             project_logger.log("驗證處理結果")
@@ -490,7 +488,7 @@ class HybridUIAutomationScript:
     
     def _execute_cwe_scan(self, project: ProjectInfo, project_logger) -> bool:
         """
-        執行 CWE 函式級別掃描
+        執行 CWE 函式級別掃描（逐行模式）
         
         Args:
             project: 專案資訊
@@ -507,7 +505,7 @@ class HybridUIAutomationScript:
             project_name = Path(project.path).name
             cwe_type = self.cwe_scan_settings["cwe_type"]
             
-            self.logger.info(f"開始執行 CWE-{cwe_type} 函式級別掃描...")
+            self.logger.info(f"開始執行 CWE-{cwe_type} 函式級別掃描（逐行模式）...")
             
             # 讀取專案的 prompt 檔案
             prompt_source_mode = self.interaction_settings.get(
@@ -529,29 +527,57 @@ class HybridUIAutomationScript:
                     self.logger.warning(f"全域提示詞檔案不存在: {prompt_file}")
                     return False
             
-            # 讀取 prompt 內容
+            # 逐行讀取 prompt 內容
             with open(prompt_file, 'r', encoding='utf-8') as f:
-                prompt_content = f.read()
+                prompt_lines = [line.strip() for line in f.readlines() if line.strip()]
             
-            # 執行函式級別掃描
-            # round_number=1 表示第一輪掃描
-            # line_number=0 表示一次性掃描整個 prompt 檔案（非逐行模式）
-            success, result_file = self.cwe_scan_manager.scan_from_prompt_function_level(
-                project_path=Path(project.path),
-                project_name=project_name,
-                prompt_content=prompt_content,
-                cwe_type=cwe_type,
-                round_number=1,
-                line_number=0
-            )
+            if not prompt_lines:
+                self.logger.warning(f"提示詞檔案為空: {prompt_file}")
+                return False
             
-            if success:
-                self.logger.info(f"✅ CWE 函式級別掃描完成")
-                self.logger.info(f"  掃描結果: {result_file}")
-                project_logger.log(f"CWE-{cwe_type} 函式級別掃描完成")
+            total_lines = len(prompt_lines)
+            self.logger.info(f"提示詞檔案共 {total_lines} 行，將逐行掃描...")
+            
+            # 逐行執行函式級別掃描
+            successful_scans = 0
+            failed_scans = 0
+            
+            for line_number, prompt_line in enumerate(prompt_lines, 1):
+                try:
+                    self.logger.info(f"掃描第 {line_number}/{total_lines} 行...")
+                    
+                    # 執行函式級別掃描
+                    success, result_file = self.cwe_scan_manager.scan_from_prompt_function_level(
+                        project_path=Path(project.path),
+                        project_name=project_name,
+                        prompt_content=prompt_line,
+                        cwe_type=cwe_type,
+                        round_number=1,
+                        line_number=line_number
+                    )
+                    
+                    if success:
+                        self.logger.info(f"✅ 第 {line_number} 行掃描完成")
+                        successful_scans += 1
+                    else:
+                        self.logger.warning(f"⚠️  第 {line_number} 行掃描失敗")
+                        failed_scans += 1
+                        
+                except Exception as e:
+                    self.logger.error(f"第 {line_number} 行掃描時發生錯誤: {e}")
+                    failed_scans += 1
+            
+            # 輸出掃描摘要
+            self.logger.create_separator(f"CWE-{cwe_type} 掃描摘要")
+            self.logger.info(f"總計: {total_lines} 行")
+            self.logger.info(f"成功: {successful_scans} 行")
+            self.logger.info(f"失敗: {failed_scans} 行")
+            
+            if successful_scans > 0:
+                project_logger.log(f"CWE-{cwe_type} 函式級別掃描完成 ({successful_scans}/{total_lines} 行)")
                 return True
             else:
-                self.logger.warning("CWE 函式級別掃描失敗")
+                self.logger.warning("所有行掃描都失敗")
                 return False
                 
         except Exception as e:

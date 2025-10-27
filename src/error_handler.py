@@ -268,7 +268,7 @@ class RetryHandler:
             Tuple[bool, Any]: (是否成功, 結果)
         """
         if max_attempts is None:
-            max_attempts = config.MAX_RETRY_ATTEMPTS
+            max_attempts = 3  # 預設重試3次
         
         delay = initial_delay
         

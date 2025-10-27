@@ -1,0 +1,2 @@
+file_path,function_name,scan_status,vulnerability_count
+test.py,test_func,success,0

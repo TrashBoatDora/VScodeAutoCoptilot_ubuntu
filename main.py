@@ -77,8 +77,9 @@ class HybridUIAutomationScript:
             self.start_time = time.time()
             self.logger.create_separator("開始執行自動化腳本")
             
-            # 顯示選項對話框（包含專案選擇）
-            selected_projects, self.use_smart_wait, clean_history = self.ui_manager.show_options_dialog()
+            # 顯示選項對話框（包含專案選擇和 Artificial Suicide 設定）
+            (selected_projects, self.use_smart_wait, clean_history, 
+             artificial_suicide_enabled, artificial_suicide_rounds) = self.ui_manager.show_options_dialog()
             
             # 如果需要清理歷史記錄
             if clean_history and selected_projects:
@@ -87,8 +88,26 @@ class HybridUIAutomationScript:
                     self.logger.error("清理執行記錄失敗")
                     return False
             
-            # 每次執行都顯示互動設定選項
-            self._show_interaction_settings_dialog()
+            # 如果啟用 Artificial Suicide 模式，跳過互動設定並使用預設設定
+            if artificial_suicide_enabled:
+                self.logger.info(f"🎯 Artificial Suicide 模式已啟用（輪數: {artificial_suicide_rounds}）")
+                self.logger.info("跳過互動設定，使用 Artificial Suicide 專用設定")
+                
+                # 建立 Artificial Suicide 專用設定
+                self.interaction_settings = {
+                    "enabled": False,  # 停用一般多輪互動
+                    "max_rounds": 1,
+                    "include_previous_response": False,
+                    "round_delay": config.INTERACTION_ROUND_DELAY,
+                    "show_ui_on_startup": False,
+                    "copilot_chat_modification_action": "revert",  # Artificial Suicide 會自己處理
+                    "prompt_source_mode": "project",  # 強制使用專案專用 prompt
+                    "artificial_suicide_mode": True,
+                    "artificial_suicide_rounds": artificial_suicide_rounds
+                }
+            else:
+                # 一般模式：顯示互動設定選項
+                self._show_interaction_settings_dialog()
             
             # 顯示 CWE 掃描設定選項
             self._show_cwe_scan_settings_dialog()
@@ -388,12 +407,21 @@ class HybridUIAutomationScript:
             if self.error_handler.emergency_stop_requested:
                 raise AutomationError("收到中斷請求", ErrorType.USER_INTERRUPT)
             
-            # 步驟3: 處理 Copilot Chat（根據設定判斷是否使用反覆互動）
+            # 步驟3: 處理 Copilot Chat（根據設定判斷是否使用反覆互動或 Artificial Suicide 模式）
             # 使用互動設定或預設值
             interaction_enabled = self.interaction_settings.get("interaction_enabled", config.INTERACTION_ENABLED) if self.interaction_settings else config.INTERACTION_ENABLED
             max_rounds = self.interaction_settings.get("max_rounds", config.INTERACTION_MAX_ROUNDS) if self.interaction_settings else config.INTERACTION_MAX_ROUNDS
+            artificial_suicide_mode = self.interaction_settings.get("artificial_suicide_mode", False) if self.interaction_settings else False
+            artificial_suicide_rounds = self.interaction_settings.get("artificial_suicide_rounds", 3) if self.interaction_settings else 3
             
-            if interaction_enabled:
+            if artificial_suicide_mode:
+                # 使用 Artificial Suicide 攻擊模式
+                project_logger.log(f"處理 Copilot Chat (Artificial Suicide 攻擊模式，輪數: {artificial_suicide_rounds})")
+                success = self._execute_artificial_suicide_mode(project, artificial_suicide_rounds, project_logger)
+                
+                if not success:
+                    raise AutomationError("Artificial Suicide 模式執行失敗", ErrorType.COPILOT_ERROR)
+            elif interaction_enabled:
                 # 使用反覆互動功能
                 project_logger.log(f"處理 Copilot Chat (啟用反覆互動功能，最大輪數: {max_rounds})")
                 success = self.copilot_handler.process_project_with_iterations(project.path, max_rounds)
@@ -427,7 +455,7 @@ class HybridUIAutomationScript:
             project_name = Path(project.path).name
             project_result_dir = execution_result_dir / project_name
             
-            # 檢查新的輪數資料夾結構
+            # 檢查新的輪數資料夾結構（AS 模式：第N輪/第N道/）
             has_success_file = False
             total_files = 0
             round_dirs = []
@@ -437,10 +465,21 @@ class HybridUIAutomationScript:
                 round_dirs = [d for d in project_result_dir.iterdir() 
                              if d.is_dir() and d.name.startswith('第') and d.name.endswith('輪')]
                 
-                # 統計所有輪數資料夾中的檔案
+                # 統計所有輪數資料夾中的檔案（包含道程序子資料夾）
                 for round_dir in round_dirs:
-                    files_in_round = list(round_dir.glob("*.md"))
-                    total_files += len(files_in_round)
+                    # 檢查道程序資料夾 (第1道, 第2道, etc.)
+                    phase_dirs = [d for d in round_dir.iterdir() 
+                                 if d.is_dir() and d.name.startswith('第') and d.name.endswith('道')]
+                    
+                    if phase_dirs:
+                        # AS 模式：檔案在道程序資料夾中
+                        for phase_dir in phase_dirs:
+                            files_in_phase = list(phase_dir.glob("*.md"))
+                            total_files += len(files_in_phase)
+                    else:
+                        # 一般模式：檔案直接在輪數資料夾中
+                        files_in_round = list(round_dir.glob("*.md"))
+                        total_files += len(files_in_round)
                 
                 # 如果有輪數資料夾且包含檔案，則認為成功
                 has_success_file = len(round_dirs) > 0 and total_files > 0
@@ -452,19 +491,29 @@ class HybridUIAutomationScript:
             
             if round_dirs:
                 for round_dir in sorted(round_dirs):
-                    files_count = len(list(round_dir.glob("*.md")))
-                    self.logger.info(f"  {round_dir.name}: {files_count} 個檔案")
+                    # 檢查道程序資料夾
+                    phase_dirs = [d for d in round_dir.iterdir() 
+                                 if d.is_dir() and d.name.startswith('第') and d.name.endswith('道')]
+                    if phase_dirs:
+                        # AS 模式：顯示每道的檔案數
+                        for phase_dir in sorted(phase_dirs):
+                            files_count = len(list(phase_dir.glob("*.md")))
+                            self.logger.info(f"  {round_dir.name}/{phase_dir.name}: {files_count} 個檔案")
+                    else:
+                        # 一般模式：顯示輪數的檔案數
+                        files_count = len(list(round_dir.glob("*.md")))
+                        self.logger.info(f"  {round_dir.name}: {files_count} 個檔案")
             
-            # 步驟5: 關閉專案（無論成功失敗都要關閉）
+            # 驗證結果（先驗證，再決定是否關閉）
+            if not has_success_file:
+                raise AutomationError("缺少成功執行結果檔案", ErrorType.PROJECT_ERROR)
+            
+            # 步驟5: 關閉專案（只在驗證成功後才關閉）
             project_logger.log("關閉 VS Code 專案")
             if not self.vscode_controller.close_current_project():
                 self.logger.warning("專案關閉失敗")
             else:
                 self.logger.info("✅ 專案關閉成功")
-            
-            # 驗證結果
-            if not has_success_file:
-                raise AutomationError("缺少成功執行結果檔案", ErrorType.PROJECT_ERROR)
             
             project_logger.log("專案處理完成")
             return True
@@ -485,6 +534,76 @@ class HybridUIAutomationScript:
             except:
                 pass
             raise AutomationError(str(e), ErrorType.UNKNOWN_ERROR)
+    
+    def _execute_artificial_suicide_mode(
+        self, 
+        project: ProjectInfo, 
+        num_rounds: int,
+        project_logger
+    ) -> bool:
+        """
+        執行 Artificial Suicide 攻擊模式
+        
+        Args:
+            project: 專案資訊
+            num_rounds: 攻擊輪數
+            project_logger: 專案日誌記錄器
+            
+        Returns:
+            bool: 執行是否成功
+        """
+        try:
+            # 導入 ArtificialSuicideMode（輕量級控制器）
+            try:
+                from src.artificial_suicide_mode import ArtificialSuicideMode
+            except ImportError:
+                from artificial_suicide_mode import ArtificialSuicideMode
+            
+            # 提取專案名稱和 CWE 類型
+            project_name = Path(project.path).name
+            
+            # 從專案名稱中提取 CWE 類型（假設格式為 xxx__CWE-XXX__xxx）
+            target_cwe = "327"  # 預設值（只取數字）
+            if "__CWE-" in project_name:
+                parts = project_name.split("__")
+                for part in parts:
+                    if part.startswith("CWE-"):
+                        target_cwe = part.replace("CWE-", "")
+                        break
+            
+            self.logger.info(f"初始化 Artificial Suicide Mode: 專案={project_name}, CWE-{target_cwe}, 輪數={num_rounds}")
+            
+            # 初始化 ArtificialSuicideMode（直接利用現有模組）
+            as_mode = ArtificialSuicideMode(
+                copilot_handler=self.copilot_handler,
+                vscode_controller=self.vscode_controller,
+                cwe_scan_manager=self.cwe_scan_manager,
+                error_handler=self.error_handler,
+                project_path=str(project.path),
+                target_cwe=target_cwe,
+                total_rounds=num_rounds
+            )
+            
+            # 執行攻擊流程
+            self.logger.info("開始執行 Artificial Suicide 攻擊流程...")
+            success = as_mode.execute()
+            
+            if success:
+                project_logger.log("✅ Artificial Suicide 攻擊模式執行成功")
+                self.logger.info("Artificial Suicide 攻擊模式執行成功")
+            else:
+                project_logger.log("❌ Artificial Suicide 攻擊模式執行失敗")
+                self.logger.error("Artificial Suicide 攻擊模式執行失敗")
+            
+            return success
+            
+        except Exception as e:
+            error_msg = f"Artificial Suicide 模式執行時發生錯誤: {e}"
+            self.logger.error(error_msg)
+            project_logger.log(f"❌ {error_msg}")
+            import traceback
+            traceback.print_exc()
+            return False
     
     def _execute_cwe_scan(self, project: ProjectInfo, project_logger) -> bool:
         """

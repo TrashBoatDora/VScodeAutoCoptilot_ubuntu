@@ -12,7 +12,7 @@ from src.logger import get_logger
 
 
 COMPLETION_MARKER = "已完成回答"
-COMPLETION_MARKER_en = "Completed response"
+COMPLETION_MARKER_en = "Response completed"
 _COMPLETION_TRAILING_CHARS = ' \t\r\n"""\'\'」』】》）〉>。、.!?;；:、…'
 
 # Copilot 自動追加的後綴內容列表（需要清理）

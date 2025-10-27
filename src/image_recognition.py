@@ -585,11 +585,6 @@ class ImageRecognition:
             bool: 所有必需圖像是否都存在且可讀取
         """
         try:
-            # 如果不要求圖像識別，直接通過
-            if not config.IMAGE_RECOGNITION_REQUIRED:
-                self.logger.info("圖像識別已設為可選，跳過圖像檔案檢查")
-                return True
-            
             # 必需的圖像
             required_images = [
                 config.STOP_BUTTON_IMAGE,

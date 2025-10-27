@@ -59,7 +59,7 @@ class InteractionSettingsUI:
             "include_previous_response": interaction_settings.get("include_previous_response", config.INTERACTION_INCLUDE_PREVIOUS_RESPONSE),
             "round_delay": interaction_settings.get("round_delay", config.INTERACTION_ROUND_DELAY),
             "copilot_chat_modification_action": interaction_settings.get("copilot_chat_modification_action", config.COPILOT_CHAT_MODIFICATION_ACTION),
-            "prompt_source_mode": interaction_settings.get("prompt_source_mode", config.PROMPT_SOURCE_MODE)  # 新增：提示詞來源模式
+            "prompt_source_mode": interaction_settings.get("prompt_source_mode", config.PROMPT_SOURCE_MODE)  # 提示詞來源模式
         }
     
     def create_scrollable_frame(self):
@@ -154,7 +154,7 @@ class InteractionSettingsUI:
                 "round_delay": self.settings["round_delay"],
                 "show_ui_on_startup": True,
                 "copilot_chat_modification_action": self.settings["copilot_chat_modification_action"],
-                "prompt_source_mode": self.settings["prompt_source_mode"]  # 新增：提示詞來源模式
+                "prompt_source_mode": self.settings["prompt_source_mode"]  # 提示詞來源模式
             }
             
             return settings_manager.update_interaction_settings(interaction_settings)
@@ -434,7 +434,7 @@ class InteractionSettingsUI:
         self.settings["include_previous_response"] = self.include_previous_var.get()
         self.settings["round_delay"] = config.INTERACTION_ROUND_DELAY  # 使用預設值
         self.settings["copilot_chat_modification_action"] = self.modification_action_var.get()
-        self.settings["prompt_source_mode"] = self.prompt_source_var.get()  # 新增：提示詞來源模式
+        self.settings["prompt_source_mode"] = self.prompt_source_var.get()
         
         # 如果選擇專案模式，需要再次驗證所有專案都有提示詞
         if self.settings["prompt_source_mode"] == "project":

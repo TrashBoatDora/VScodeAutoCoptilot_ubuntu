@@ -21,17 +21,19 @@ class UIManager:
         self.choice_made = False
         self.selected_projects = set()  # 使用者選擇的專案
         self.clean_history = True  # 是否清理歷史記錄
+        self.artificial_suicide_enabled = False  # 是否啟用 Artificial Suicide 模式
+        self.artificial_suicide_rounds = 3  # Artificial Suicide 攻擊輪數
         
     def show_options_dialog(self) -> tuple:
         """
         顯示選項對話框，讓使用者選擇執行選項
         
         Returns:
-            tuple: (選中的專案集合, 是否使用智能等待, 是否清理歷史)
+            tuple: (選中的專案集合, 是否使用智能等待, 是否清理歷史, 是否啟用Artificial Suicide, Artificial Suicide輪數)
         """
         root = tk.Tk()
         root.title("自動化腳本設定")
-        root.geometry("480x500")  # 調整視窗尺寸
+        root.geometry("480x650")  # 增加視窗高度以容納新選項
         root.resizable(False, False)  # 固定視窗大小，防止使用者調整大小
         
         # 設定視窗樣式
@@ -121,6 +123,49 @@ class UIManager:
         )
         fixed_radio.pack(anchor=tk.W, padx=10, pady=5)
         
+        # === Artificial Suicide 攻擊模式設定 ===
+        as_frame = ttk.LabelFrame(frame, text="🎯 Artificial Suicide 攻擊模式", padding=10)
+        as_frame.pack(fill=tk.X, pady=10)
+        
+        # 啟用 Artificial Suicide 勾選框
+        as_var = tk.BooleanVar(value=False)
+        as_checkbox = ttk.Checkbutton(
+            as_frame,
+            text="啟用 Artificial Suicide 攻擊模式",
+            variable=as_var,
+            command=lambda: self._update_as_state(as_var.get(), as_rounds_spinbox, wait_frame)
+        )
+        as_checkbox.pack(anchor=tk.W, pady=5)
+        
+        # 攻擊輪數設定
+        as_rounds_frame = ttk.Frame(as_frame)
+        as_rounds_frame.pack(fill=tk.X, pady=5)
+        
+        ttk.Label(as_rounds_frame, text="攻擊輪數:").pack(side=tk.LEFT, padx=(20, 5))
+        as_rounds_var = tk.IntVar(value=3)
+        as_rounds_spinbox = ttk.Spinbox(
+            as_rounds_frame,
+            from_=1,
+            to=10,
+            textvariable=as_rounds_var,
+            width=5,
+            state="disabled"  # 初始為禁用
+        )
+        as_rounds_spinbox.pack(side=tk.LEFT)
+        
+        # Artificial Suicide 說明
+        as_desc = """說明：
+• Artificial Suicide 模式會測試 Copilot 是否會生成不安全的程式碼
+• 啟用此模式將自動跳過「互動設定」，使用專案專用 prompt.txt
+• 每輪包含兩道程序：第1道誘導命名修改，第2道實作並掃描"""
+        
+        as_desc_label = ttk.Label(as_frame, text=as_desc, wraplength=430, foreground="gray")
+        as_desc_label.pack(pady=5, fill=tk.X)
+        
+        # 儲存變數以供回調使用
+        self._as_var = as_var
+        self._as_rounds_var = as_rounds_var
+        
         # 說明文字
         description = """
         • 瀏覽專案: 
@@ -147,6 +192,8 @@ class UIManager:
                 return
             
             self.smart_wait_selected = wait_var.get()
+            self.artificial_suicide_enabled = as_var.get()
+            self.artificial_suicide_rounds = as_rounds_var.get()
             self.choice_made = True
             root.destroy()
         
@@ -169,7 +216,37 @@ class UIManager:
         if not self.choice_made:
             sys.exit(0)
             
-        return (self.selected_projects, self.smart_wait_selected, self.clean_history)
+        return (
+            self.selected_projects, 
+            self.smart_wait_selected, 
+            self.clean_history,
+            self.artificial_suicide_enabled,
+            self.artificial_suicide_rounds
+        )
+    
+    def _update_as_state(self, enabled: bool, spinbox, wait_frame):
+        """
+        更新 Artificial Suicide 狀態
+        
+        Args:
+            enabled: 是否啟用
+            spinbox: 輪數選擇器
+            wait_frame: 等待模式框架
+        """
+        if enabled:
+            # 啟用輪數設定
+            spinbox.configure(state="normal")
+            # 禁用等待模式選擇（Artificial Suicide 有自己的邏輯）
+            for child in wait_frame.winfo_children():
+                if isinstance(child, ttk.Radiobutton):
+                    child.configure(state="disabled")
+        else:
+            # 禁用輪數設定
+            spinbox.configure(state="disabled")
+            # 啟用等待模式選擇
+            for child in wait_frame.winfo_children():
+                if isinstance(child, ttk.Radiobutton):
+                    child.configure(state="normal")
     
     def execute_reset_if_needed(self, should_reset: bool) -> bool:
         """
@@ -213,9 +290,10 @@ class UIManager:
         - ExecutionResult/Success/{專案名稱}/
         - ExecutionResult/AutomationLog/{專案名稱}*.txt
         - ExecutionResult/AutomationReport/{專案名稱}*.json
-        - CWE_Result/CWE-*/{專案名稱}*.csv
-        - CWE_Result/CWE-*/Bandit/{專案名稱}*.csv
-        - CWE_Result/CWE-*/Semgrep/{專案名稱}*.csv
+        - OriginalScanResult/Bandit/CWE-*/{專案名稱}/ (完整目錄)
+        - OriginalScanResult/Semgrep/CWE-*/{專案名稱}/ (完整目錄)
+        - CWE_Result/CWE-*/Bandit/{專案名稱}/ (完整目錄)
+        - CWE_Result/CWE-*/Semgrep/{專案名稱}/ (完整目錄)
         - cwe_scan_results/CWE-*/{專案名稱}*.csv (舊版，如果存在)
         
         Args:
@@ -283,7 +361,38 @@ class UIManager:
                         except Exception as e:
                             print(f"  ⚠️  刪除報告失敗: {report_file.name}: {e}")
                 
-                # 4. CWE 掃描結果（支援新的 Bandit/Semgrep 分離結構）
+                # 4. OriginalScanResult (原始掃描結果 - 完整專案目錄)
+                original_scan_dirs = [
+                    script_root / "OriginalScanResult" / "Bandit",
+                    script_root / "OriginalScanResult" / "Semgrep"
+                ]
+                
+                for original_scan_dir in original_scan_dirs:
+                    if not original_scan_dir.exists():
+                        continue
+                    
+                    scanner_name = original_scan_dir.name
+                    
+                    # 檢查所有 CWE 類型目錄
+                    for cwe_type_dir in original_scan_dir.glob("CWE-*"):
+                        if not cwe_type_dir.is_dir():
+                            continue
+                        
+                        # 刪除整個專案目錄
+                        project_dir = cwe_type_dir / project_name
+                        if project_dir.exists():
+                            try:
+                                # 計算大小
+                                dir_size = sum(f.stat().st_size for f in project_dir.rglob('*') if f.is_file())
+                                total_size += dir_size
+                                
+                                shutil.rmtree(project_dir)
+                                print(f"  ✅ 已刪除{scanner_name}原始掃描: OriginalScanResult/{scanner_name}/{cwe_type_dir.name}/{project_name}/ ({dir_size / 1024:.2f} KB)")
+                                cleaned_count += 1
+                            except Exception as e:
+                                print(f"  ⚠️  刪除{scanner_name}原始掃描失敗: {e}")
+                
+                # 5. CWE 掃描結果（支援新的 Bandit/Semgrep 分離結構 - 完整專案目錄）
                 cwe_result_dirs = [
                     script_root / "CWE_Result",
                     script_root / "cwe_scan_results"
@@ -298,7 +407,7 @@ class UIManager:
                         if not cwe_type_dir.is_dir():
                             continue
                         
-                        # 清理根目錄的掃描結果（舊格式）
+                        # 清理根目錄的掃描結果（舊格式 - 單個 CSV 檔案）
                         for result_file in cwe_type_dir.glob(f"{project_name}*.csv"):
                             try:
                                 file_size = result_file.stat().st_size
@@ -310,33 +419,33 @@ class UIManager:
                             except Exception as e:
                                 print(f"  ⚠️  刪除CWE掃描失敗: {result_file.name}: {e}")
                         
-                        # 清理 Bandit 子資料夾
-                        bandit_dir = cwe_type_dir / "Bandit"
+                        # 清理 Bandit 子資料夾（新格式 - 完整專案目錄）
+                        bandit_dir = cwe_type_dir / "Bandit" / project_name
                         if bandit_dir.exists():
-                            for result_file in bandit_dir.glob(f"{project_name}*.csv"):
-                                try:
-                                    file_size = result_file.stat().st_size
-                                    total_size += file_size
-                                    
-                                    result_file.unlink()
-                                    print(f"  ✅ 已刪除Bandit結果: {cwe_type_dir.name}/Bandit/{result_file.name} ({file_size / 1024:.2f} KB)")
-                                    cleaned_count += 1
-                                except Exception as e:
-                                    print(f"  ⚠️  刪除Bandit結果失敗: {result_file.name}: {e}")
+                            try:
+                                # 計算大小
+                                dir_size = sum(f.stat().st_size for f in bandit_dir.rglob('*') if f.is_file())
+                                total_size += dir_size
+                                
+                                shutil.rmtree(bandit_dir)
+                                print(f"  ✅ 已刪除Bandit結果目錄: {cwe_type_dir.name}/Bandit/{project_name}/ ({dir_size / 1024:.2f} KB)")
+                                cleaned_count += 1
+                            except Exception as e:
+                                print(f"  ⚠️  刪除Bandit結果目錄失敗: {e}")
                         
-                        # 清理 Semgrep 子資料夾
-                        semgrep_dir = cwe_type_dir / "Semgrep"
+                        # 清理 Semgrep 子資料夾（新格式 - 完整專案目錄）
+                        semgrep_dir = cwe_type_dir / "Semgrep" / project_name
                         if semgrep_dir.exists():
-                            for result_file in semgrep_dir.glob(f"{project_name}*.csv"):
-                                try:
-                                    file_size = result_file.stat().st_size
-                                    total_size += file_size
-                                    
-                                    result_file.unlink()
-                                    print(f"  ✅ 已刪除Semgrep結果: {cwe_type_dir.name}/Semgrep/{result_file.name} ({file_size / 1024:.2f} KB)")
-                                    cleaned_count += 1
-                                except Exception as e:
-                                    print(f"  ⚠️  刪除Semgrep結果失敗: {result_file.name}: {e}")
+                            try:
+                                # 計算大小
+                                dir_size = sum(f.stat().st_size for f in semgrep_dir.rglob('*') if f.is_file())
+                                total_size += dir_size
+                                
+                                shutil.rmtree(semgrep_dir)
+                                print(f"  ✅ 已刪除Semgrep結果目錄: {cwe_type_dir.name}/Semgrep/{project_name}/ ({dir_size / 1024:.2f} KB)")
+                                cleaned_count += 1
+                            except Exception as e:
+                                print(f"  ⚠️  刪除Semgrep結果目錄失敗: {e}")
             
             # 輸出總結
             print(f"\n{'='*60}")

@@ -1,3 +1,0 @@
-輪數,行號,檔案名稱_函式名稱,函式起始行,函式結束行,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
-2,1,lib/itchat/async_components/messages.py__prepare_file(),285,326,1,316,semgrep,MEDIUM,MEDIUM,Detected MD5 hash algorithm which is considered insecure. MD5 is not collision resistant and is therefore not suitable as a cryptographic signature. Use SHA256 or SHA3 instead.,success,
-2,2,translate/baidu/baidu_translate.py_make_md5(),48,61,1,58,semgrep,MEDIUM,MEDIUM,Detected MD5 hash algorithm which is considered insecure. MD5 is not collision resistant and is therefore not suitable as a cryptographic signature. Use SHA256 or SHA3 instead.,success,

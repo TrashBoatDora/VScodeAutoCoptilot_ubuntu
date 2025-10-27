@@ -42,8 +42,8 @@ except ImportError:
 
 class CopilotHandler:
     """Copilot Chat 操作處理器"""
-    COMPLETION_INSTRUCTION = '【重要】除了寫程式外，不要執行其餘操作，一次就回答完成，並且在回答完成後，務必在最後一行加上「已完成回答」'
-    
+    COMPLETION_INSTRUCTION = '【[Important] Do not perform any additional operations. Make sure to add “Response completed” on the last line after finishing your answer.】'
+
     def __init__(self, error_handler=None, interaction_settings=None, cwe_scan_manager=None, cwe_scan_settings=None):
         """
         初始化 Copilot 處理器
@@ -571,7 +571,12 @@ class CopilotHandler:
             project_path: 專案路徑
             response: 回應內容，若為 None 則使用最後一次的回應
             is_success: 是否成功執行
-            **kwargs: 額外參數，如 round_number（互動輪數）
+            **kwargs: 額外參數
+                - round_number: 互動輪數
+                - phase_number: 道程序編號（AS 模式專用：1=Query Phase, 2=Coding Phase）
+                - line_number: 行號
+                - filename: 檔案名稱（AS 模式專用）
+                - function_name: 函式名稱（AS 模式專用）
         
         Returns:
             bool: 儲存是否成功
@@ -601,16 +606,32 @@ class CopilotHandler:
             round_subdir = project_subdir / f"第{round_number}輪"
             round_subdir.mkdir(parents=True, exist_ok=True)
             
-            # 生成檔名（包含時間戳記和行號，用於反覆互動的版本控制）
-            timestamp = time.strftime('%Y%m%d_%H%M%S')  # 增加秒數確保唯一性
-            line_number = kwargs.get('line_number', None)  # 新增：行號參數
+            # 檢查是否為 AS 模式（有 phase_number 參數）
+            phase_number = kwargs.get('phase_number', None)
+            if phase_number is not None:
+                # AS 模式：建立第N道資料夾
+                phase_subdir = round_subdir / f"第{phase_number}道"
+                phase_subdir.mkdir(parents=True, exist_ok=True)
+                output_dir = phase_subdir
+            else:
+                # 一般模式：直接在輪數資料夾下
+                output_dir = round_subdir
             
-            if line_number is not None:
+            # 生成檔名
+            timestamp = time.strftime('%Y%m%d_%H%M%S')
+            line_number = kwargs.get('line_number', None)
+            filename = kwargs.get('filename', None)
+            function_name = kwargs.get('function_name', None)
+            
+            if phase_number is not None and filename and function_name:
+                # AS 模式：第N行_{filename}_{function}.md
+                output_file = output_dir / f"第{line_number}行_{filename}_{function_name}.md"
+            elif line_number is not None:
                 # 專案專用提示詞模式：按行記錄
-                output_file = round_subdir / f"{timestamp}_第{line_number}行.md"
+                output_file = output_dir / f"{timestamp}_第{line_number}行.md"
             else:
                 # 全域提示詞模式：按輪記錄
-                output_file = round_subdir / f"{timestamp}_回應.md"
+                output_file = output_dir / f"{timestamp}_回應.md"
             
             self.logger.info(f"儲存回應到: {output_file}")
             
@@ -626,10 +647,20 @@ class CopilotHandler:
                 f.write(f"# 專案路徑: {project_path}\n")
                 f.write(f"# 互動輪數: 第 {round_number} 輪\n")
                 
+                # AS 模式：顯示道程序資訊
+                if phase_number is not None:
+                    phase_name = "Query Phase" if phase_number == 1 else "Coding Phase"
+                    f.write(f"# 道程序: 第 {phase_number} 道（{phase_name}）\n")
+                
                 # 如果有行號資訊，添加行號
                 if line_number is not None:
                     total_lines = kwargs.get('total_lines', '?')
                     f.write(f"# 提示詞行號: 第 {line_number}/{total_lines} 行\n")
+                
+                # AS 模式：顯示檔案和函式資訊
+                if filename and function_name:
+                    f.write(f"# 目標檔案: {filename}\n")
+                    f.write(f"# 目標函式: {function_name}\n")
                 
                 # 記錄重試信息
                 if retry_count > 0:

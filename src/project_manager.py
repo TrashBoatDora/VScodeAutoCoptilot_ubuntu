@@ -396,7 +396,7 @@ class ProjectManager:
             bool: 是否應該重試
         """
         if max_retries is None:
-            max_retries = config.MAX_RETRY_ATTEMPTS
+            max_retries = 3  # 預設重試3次
         
         project = self.get_project_by_name(project_name)
         if project and project.status == "failed":
@@ -415,7 +415,7 @@ class ProjectManager:
             List[ProjectInfo]: 需要重試的專案列表
         """
         if max_retries is None:
-            max_retries = config.MAX_RETRY_ATTEMPTS
+            max_retries = 3  # 預設重試3次
         
         retry_projects = []
         for project in self.projects:

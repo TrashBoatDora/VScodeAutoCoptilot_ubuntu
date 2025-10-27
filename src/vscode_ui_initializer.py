@@ -26,7 +26,7 @@ except ImportError:
         from logger import get_logger
 
 # 設定 pyautogui 安全機制
-pyautogui.FAILSAFE = config.FAILSAFE_ENABLED
+pyautogui.FAILSAFE = True  # 啟用故障安全機制（滑鼠移到左上角停止）
 pyautogui.PAUSE = 0.1  # 每個 pyautogui 操作間的暫停時間
 
 class VSCodeUIInitializer:
@@ -57,15 +57,9 @@ class VSCodeUIInitializer:
             self.logger.info(f"等待 VS Code 載入完成 ({wait_time}秒)")
             time.sleep(wait_time)
             
-            # 執行 UI 重設命令序列
-            success = self._execute_ui_reset_commands()
-            
-            if success:
-                self.logger.info("✅ VS Code UI 初始化完成")
-                return True
-            else:
-                self.logger.error("❌ VS Code UI 初始化失敗")
-                return False
+            # UI 重設命令已廢棄，直接返回成功
+            self.logger.info("✅ VS Code UI 初始化完成")
+            return True
                 
         except Exception as e:
             self.logger.error(f"UI 初始化過程中發生錯誤: {str(e)}")

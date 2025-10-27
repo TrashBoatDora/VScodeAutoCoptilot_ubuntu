@@ -61,90 +61,51 @@ class CWEScanManager:
     
     def extract_file_paths_from_prompt(self, prompt_content: str) -> List[str]:
         """
-        從 prompt 內容中提取檔案路徑
-        
-        支援的固定格式：
-        - 請幫我定位到{rel}的{fn_part}的函式，並直接實作任何你覺得可行的程式碼...
-          其中 {rel} 是檔案路徑，{fn_part} 是函式名稱
-        
-        範例：
-        - 請幫我定位到aider/analytics.py的event()的函式
-        - 請幫我定位到aider/coders/wholefile_coder.py的do_live_diff()的函式
-        
+        從 prompt 內容中提取檔案路徑，格式為每行: {檔案}|{函式}
         Args:
-            prompt_content: prompt 內容
-            
+            prompt_content: prompt 內容（多行）
         Returns:
             List[str]: 提取到的檔案路徑列表
         """
         file_paths = []
-        seen_paths = set()  # 使用 set 來去重
-        
-        # 正則表達式模式 - 專門匹配固定格式
-        # 格式：請幫我定位到{檔案路徑}的{函式名稱}的函式
-        pattern = r'請幫我定位到([a-zA-Z0-9_/\-\.]+\.py)的'
-        
-        matches = re.findall(pattern, prompt_content)
-        
-        for match in matches:
-            # 清理路徑
-            cleaned_path = match.strip()
-            
-            # 去重並添加
-            if cleaned_path and cleaned_path not in seen_paths:
-                file_paths.append(cleaned_path)
-                seen_paths.add(cleaned_path)
-        
+        seen_paths = set()
+        for line in prompt_content.strip().splitlines():
+            parts = line.strip().split('|')
+            if len(parts) == 2:
+                file_path = parts[0].strip()
+                if file_path and file_path not in seen_paths:
+                    file_paths.append(file_path)
+                    seen_paths.add(file_path)
         self.logger.info(f"從 prompt 中提取到 {len(file_paths)} 個檔案路徑")
         for path in file_paths:
             self.logger.debug(f"  - {path}")
-        
         return file_paths
     
     def extract_function_targets_from_prompt(self, prompt_content: str) -> List[FunctionTarget]:
         """
-        從 prompt 內容中提取函式目標（檔案+函式名稱）
-        
-        支援的格式：
-        - 請幫我定位到{檔案路徑}的{函式1}()、{函式2}()的函式...
-        
-        範例：
-        - 請幫我定位到aider/coders/search_replace.py的map_patches()、read_text()的函式
-        
+        從 prompt 內容中提取函式目標（檔案+函式名稱），格式為每行: {檔案}|{函式}
         Args:
-            prompt_content: prompt 內容
-            
+            prompt_content: prompt 內容（多行）
         Returns:
             List[FunctionTarget]: 函式目標列表
         """
         targets = []
-        
-        # 正則表達式：匹配「請幫我定位到{檔案}的{函式列表}的函式」
-        # 函式列表格式：func1()、func2()、func3()
-        pattern = r'請幫我定位到([a-zA-Z0-9_/\-\.]+\.py)的([^的]+)的函式'
-        
-        matches = re.findall(pattern, prompt_content)
-        
-        for file_path, func_part in matches:
-            # 清理檔案路徑
-            file_path = file_path.strip()
-            
-            # 提取函式名稱（可能有多個，用頓號或逗號分隔）
-            # 格式：map_patches()、read_text() 或 func1(), func2()
-            func_pattern = r'([a-zA-Z0-9_]+)\(\)'
-            function_names = re.findall(func_pattern, func_part)
-            
-            if file_path and function_names:
-                target = FunctionTarget(
-                    file_path=file_path,
-                    function_names=function_names
-                )
-                targets.append(target)
-                
-                self.logger.debug(f"  {file_path}: {', '.join(function_names)}")
-        
+        for line in prompt_content.strip().splitlines():
+            parts = line.strip().split('|')
+            if len(parts) == 2:
+                file_path = parts[0].strip()
+                func_name = parts[1].strip()
+                if file_path and func_name:
+                    # 支援多個函式名稱（以逗號、頓號、空格分隔）
+                    func_names = re.split(r'[、,，\s]+', func_name)
+                    func_names = [fn for fn in func_names if fn]
+                    target = FunctionTarget(
+                        file_path=file_path,
+                        function_names=func_names
+                    )
+                    targets.append(target)
+                    self.logger.debug(f"  {file_path}: {', '.join(func_names)}")
         self.logger.info(f"從 prompt 中提取到 {len(targets)} 個檔案，共 {sum(len(t.function_names) for t in targets)} 個函式")
-        
         return targets
     
     def scan_files(
@@ -258,35 +219,56 @@ class CWEScanManager:
             
             # 為每個目標函式寫一列
             for target in function_targets:
-                file_result = scan_results.get(target.file_path)
-                
                 for func_name in target.function_names:
                     func_key = f"{target.file_path}_{func_name}()"
+                    
+                    # 使用正確的 key 查找掃描結果（與 scan_from_prompt_function_level 中的 key 格式一致）
+                    result_key = f"{target.file_path}::{func_name}"
+                    file_result = scan_results.get(result_key)
                     
                     # 查找該函式的漏洞（可能有多個，來自不同掃描器）
                     func_vulns = []
                     func_start = ''
                     func_end = ''
-                    scan_status = 'success'  # 預設成功
+                    scan_status = 'unknown'  # 預設為未知狀態（表示沒有掃描結果）
                     failure_reason = ''
+                    has_scan_record = False  # 標記是否找到任何掃描記錄（包括成功但無漏洞的）
                     
                     if file_result and file_result.details:
                         for vuln in file_result.details:
-                            # 檢查是否是掃描失敗記錄（line_start=0 且 scan_status=failed）
+                            # 首先檢查是否是掃描失敗記錄
                             if vuln.scan_status == 'failed':
                                 # 如果有掃描器過濾，檢查是否符合
                                 if scanner_filter is None or (vuln.scanner and vuln.scanner.value == scanner_filter):
                                     scan_status = 'failed'
                                     failure_reason = vuln.failure_reason or 'Unknown error'
+                                    has_scan_record = True
                                     # 不繼續處理其他漏洞
                                     break
-                            elif vuln.function_name == func_name:
+                            # 如果不是失敗記錄，檢查是否是目標函式的記錄
+                            elif vuln.function_name == func_name or (vuln.scan_status == 'success' and not vuln.function_name):
                                 # 如果有掃描器過濾，檢查是否符合
                                 if scanner_filter is None or (vuln.scanner and vuln.scanner.value == scanner_filter):
-                                    func_vulns.append(vuln)
-                                    if not func_start:
-                                        func_start = vuln.function_start or ''
-                                        func_end = vuln.function_end or ''
+                                    has_scan_record = True
+                                    # 只有當 vulnerability_count 不為 0 時才算真正的漏洞
+                                    if vuln.function_name == func_name and (vuln.vulnerability_count is None or vuln.vulnerability_count > 0):
+                                        # 找到該函式的漏洞記錄
+                                        func_vulns.append(vuln)
+                                        if not func_start:
+                                            func_start = vuln.function_start or ''
+                                            func_end = vuln.function_end or ''
+                    
+                    # 判斷最終狀態
+                    if scan_status == 'failed':
+                        # 已經標記為失敗
+                        pass
+                    elif has_scan_record:
+                        # 找到了掃描記錄（可能有漏洞，也可能沒漏洞但掃描成功）
+                        scan_status = 'success'
+                    else:
+                        # 沒有找到任何掃描記錄
+                        scan_status = 'failed'
+                        failure_reason = f'No scan results found for {scanner_filter or "any scanner"}'
                     
                     if scan_status == 'failed':
                         # 掃描失敗：記錄失敗資訊
@@ -306,14 +288,12 @@ class CWEScanManager:
                             failure_reason
                         ])
                     elif func_vulns:
-                        # 有漏洞：每個函式寫一列（已聚合）
+                        # 有漏洞：為每個漏洞寫一列
                         for vuln in func_vulns:
                             # 格式化漏洞行號列表
                             if vuln.all_vulnerability_lines and len(vuln.all_vulnerability_lines) > 1:
-                                # 多個漏洞行號，使用逗號分隔
                                 vuln_lines = ','.join(map(str, sorted(vuln.all_vulnerability_lines)))
                             else:
-                                # 單個漏洞行號
                                 vuln_lines = str(vuln.line_start)
                             
                             writer.writerow([
@@ -322,25 +302,25 @@ class CWEScanManager:
                                 func_key,
                                 func_start,
                                 func_end,
-                                vuln.vulnerability_count or 1,  # 漏洞數量
-                                vuln_lines,  # 漏洞行號（可能是多個）
+                                vuln.vulnerability_count if vuln.vulnerability_count is not None else 1,
+                                vuln_lines,
                                 vuln.scanner.value if vuln.scanner else '',
                                 vuln.confidence or '',
                                 vuln.severity or '',
                                 vuln.description or '',
-                                vuln.scan_status or 'success',
-                                vuln.failure_reason or ''
+                                'success',
+                                ''
                             ])
                     else:
-                        # 沒有漏洞：也要記錄（作為實驗數據點）
+                        # 沒有漏洞但掃描成功：記錄安全狀態
                         writer.writerow([
                             round_number,
                             line_number,
                             func_key,
                             func_start,
                             func_end,
-                            0,  # 漏洞數量
-                            '',  # 漏洞行號
+                            0,
+                            '',
                             scanner_filter or '',
                             '',
                             '',
@@ -388,43 +368,49 @@ class CWEScanManager:
             total_functions = sum(len(t.function_names) for t in function_targets)
             self.logger.info(f"提取到 {len(function_targets)} 個檔案，共 {total_functions} 個函式")
             
-            # 步驟2: 收集需要掃描的檔案（去重）
-            unique_files = list(set(t.file_path for t in function_targets))
-            
-            # 步驟3: 掃描檔案
+            # 步驟2: 為每個函式目標進行掃描（不去重，因為不同函式需要獨立的報告）
             scan_results_dict = {}
-            for file_path in unique_files:
+            for target in function_targets:
+                file_path = target.file_path
                 full_path = project_path / file_path
                 
                 if not full_path.exists():
                     self.logger.warning(f"檔案不存在: {file_path}")
-                    scan_results_dict[file_path] = ScanResult(
-                        file_path=file_path,
-                        has_vulnerability=False,
-                        vulnerability_count=0,
-                        details=[]
-                    )
+                    # 為這個 target 的所有函式創建失敗記錄
+                    for func_name in target.function_names:
+                        key = f"{file_path}::{func_name}"
+                        scan_results_dict[key] = ScanResult(
+                            file_path=file_path,
+                            has_vulnerability=False,
+                            vulnerability_count=0,
+                            details=[]
+                        )
                     continue
                 
-                # 掃描檔案，傳入專案名稱和輪數
-                vulnerabilities = self.detector.scan_single_file(
-                    full_path, 
-                    cwe_type, 
-                    project_name, 
-                    round_number
-                )
-                
-                scan_results_dict[file_path] = ScanResult(
-                    file_path=file_path,
-                    has_vulnerability=len(vulnerabilities) > 0,
-                    vulnerability_count=len(vulnerabilities),
-                    details=vulnerabilities
-                )
-                
-                status = "發現漏洞" if vulnerabilities else "安全"
-                self.logger.info(f"  {file_path}: {status} ({len(vulnerabilities)} 個問題)")
+                # 為每個函式進行掃描（生成獨立的原始報告）
+                for func_name in target.function_names:
+                    # 掃描檔案，傳入專案名稱、輪數和函式名稱
+                    vulnerabilities = self.detector.scan_single_file(
+                        full_path, 
+                        cwe_type,
+                        project_name=project_name,
+                        round_number=round_number,
+                        function_name=func_name
+                    )
+                    
+                    # 使用檔案路徑::函式名稱作為 key，避免重複
+                    key = f"{file_path}::{func_name}"
+                    scan_results_dict[key] = ScanResult(
+                        file_path=file_path,
+                        has_vulnerability=len(vulnerabilities) > 0,
+                        vulnerability_count=len(vulnerabilities),
+                        details=vulnerabilities
+                    )
+                    
+                    status = "發現漏洞" if vulnerabilities else "安全"
+                    self.logger.info(f"  {file_path}::{func_name}: {status} ({len(vulnerabilities)} 個問題)")
             
-            # 步驟4: 儲存函式級別結果（分離 Bandit 和 Semgrep）
+            # 步驟3: 儲存函式級別結果（分離 Bandit 和 Semgrep）
             # 新結構：CWE-{cwe}/Bandit/{project}/第N輪/
             cwe_dir = self.output_dir / f"CWE-{cwe_type}"
             cwe_dir.mkdir(parents=True, exist_ok=True)
@@ -494,7 +480,10 @@ class CWEScanManager:
             return True, (bandit_file, semgrep_file)
             
         except Exception as e:
-            self.logger.error(f"函式級別掃描過程發生錯誤: {e}", exc_info=True)
+            import traceback
+            error_details = traceback.format_exc()
+            self.logger.error(f"函式級別掃描過程發生錯誤: {e}\n{error_details}")
+            return False, None
 
 
 # 全域實例

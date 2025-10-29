@@ -182,7 +182,7 @@ class CopilotHandler:
     
     def open_copilot_chat(self) -> bool:
         """
-        開啟 Copilot Chat (使用 Ctrl+F1)
+        開啟 Copilot Chat (使用 Ctrl+F1)，並可選擇性切換 LLM 模型
         
         Returns:
             bool: 開啟是否成功
@@ -197,12 +197,43 @@ class CopilotHandler:
             # 等待面板開啟和聚焦
             time.sleep(2)
             
+            # 如果啟用模型切換功能，執行模型切換操作
+            if config.COPILOT_SWITCH_MODEL_ON_START:
+                self.logger.info("執行 LLM 模型切換操作...")
+                self._switch_copilot_model()
+            
             self.is_chat_open = True
             self.logger.copilot_interaction("開啟 Chat 面板", "SUCCESS")
             return True
             
         except Exception as e:
             self.logger.copilot_interaction("開啟 Chat 面板", "ERROR", str(e))
+            return False
+    
+    def _switch_copilot_model(self) -> bool:
+        """
+        切換 Copilot 的 LLM 模型 (使用 Ctrl+Alt+. 然後 Enter)
+        
+        Returns:
+            bool: 切換是否成功
+        """
+        try:
+            self.logger.info("按下 Ctrl+Alt+. 開啟模型選擇...")
+            
+            # 按下 Ctrl+Alt+.
+            pyautogui.hotkey('ctrl', 'alt', '.')
+            time.sleep(1)
+            
+            # 按下 Enter 確認選擇
+            self.logger.info("按下 Enter 確認模型選擇...")
+            pyautogui.press('enter')
+            time.sleep(config.COPILOT_MODEL_SWITCH_DELAY)
+            
+            self.logger.info("✅ LLM 模型切換完成")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"切換 LLM 模型時發生錯誤: {str(e)}")
             return False
     
     def send_prompt(self, prompt: str = None, round_number: int = 1) -> bool:

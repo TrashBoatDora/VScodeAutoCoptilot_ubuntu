@@ -278,13 +278,28 @@ class CWEDetector:
             if results:
                 # 有發現漏洞：為每個漏洞創建記錄
                 for result in results:
+                    file_path_str = result.get("filename", "")
+                    line_num = result.get("line_number", 0)
+                    
+                    # 提取函式資訊（起始行、結束行）
+                    detected_func_name, func_start, func_end = None, None, None
+                    if file_path_str and line_num > 0:
+                        detected_func_name, func_start, func_end = self._extract_function_info(
+                            Path(file_path_str), line_num
+                        )
+                    
+                    # 如果外部傳入了 function_name，優先使用；否則使用檢測到的
+                    final_func_name = function_name if function_name else detected_func_name
+                    
                     vuln = CWEVulnerability(
                         cwe_id=cwe,
-                        file_path=result.get("filename", ""),
-                        line_start=result.get("line_number", 0),
-                        line_end=result.get("line_number", 0),
+                        file_path=file_path_str,
+                        line_start=line_num,
+                        line_end=line_num,
                         column_start=result.get("col_offset", 0),
-                        function_name=function_name,  # 也可以設置成功掃描的函式名稱
+                        function_name=final_func_name,
+                        function_start=func_start,
+                        function_end=func_end,
                         scanner=ScannerType.BANDIT,
                         severity=result.get("issue_severity", ""),
                         confidence=result.get("issue_confidence", ""),  # Bandit 的信心度
@@ -440,11 +455,21 @@ class CWEDetector:
             if results:
                 # 有發現漏洞：為每個漏洞創建記錄
                 for result in results:
-                    file_path = result.get("path", "")
+                    file_path_str = result.get("path", "")
                     start_line = result.get("start", {}).get("line", 0)
                     end_line = result.get("end", {}).get("line", 0)
                     start_col = result.get("start", {}).get("col", 0)
                     end_col = result.get("end", {}).get("col", 0)
+                    
+                    # 提取函式資訊（起始行、結束行）
+                    detected_func_name, func_start, func_end = None, None, None
+                    if file_path_str and start_line > 0:
+                        detected_func_name, func_start, func_end = self._extract_function_info(
+                            Path(file_path_str), start_line
+                        )
+                    
+                    # 如果外部傳入了 function_name，優先使用；否則使用檢測到的
+                    final_func_name = function_name if function_name else detected_func_name
                     
                     # 提取嚴重性和信心度
                     extra = result.get("extra", {})
@@ -462,12 +487,14 @@ class CWEDetector:
                     
                     vuln = CWEVulnerability(
                         cwe_id=cwe,
-                        file_path=file_path,
+                        file_path=file_path_str,
                         line_start=start_line,
                         line_end=end_line,
                         column_start=start_col,
                         column_end=end_col,
-                        function_name=function_name,  # 也可以設置成功掃描的函式名稱
+                        function_name=final_func_name,
+                        function_start=func_start,
+                        function_end=func_end,
                         scanner=ScannerType.SEMGREP,
                         severity=severity,
                         confidence=confidence,  # Semgrep 的信心度
@@ -798,6 +825,92 @@ class CWEDetector:
         
         logger.info(f"單檔掃描完成，發現 {len(all_vulns)} 個漏洞")
         return all_vulns
+    
+    def _extract_function_info(
+        self, 
+        file_path: Path, 
+        line_number: int
+    ) -> Tuple[Optional[str], Optional[int], Optional[int]]:
+        """
+        從檔案中提取指定行所在的函式資訊
+        
+        Args:
+            file_path: 檔案路徑
+            line_number: 行號
+            
+        Returns:
+            Tuple[函式名稱, 函式起始行, 函式結束行]
+        """
+        if not file_path.exists():
+            return None, None, None
+        
+        try:
+            with open(file_path, 'r', encoding='utf-8') as f:
+                lines = f.readlines()
+            
+            # 從目標行向上搜尋函式定義
+            current_indent = None
+            function_name = None
+            function_start = None
+            
+            # 向上搜尋函式定義
+            for i in range(line_number - 1, -1, -1):
+                line = lines[i]
+                stripped = line.lstrip()
+                
+                # 跳過空行和註釋
+                if not stripped or stripped.startswith('#'):
+                    continue
+                
+                # 計算縮排
+                indent = len(line) - len(stripped)
+                
+                # 找到函式定義
+                if stripped.startswith('def ') or stripped.startswith('async def '):
+                    # 如果還沒設定縮排，或者這個函式的縮排更小（外層函式）
+                    if current_indent is None or indent < current_indent:
+                        # 提取函式名稱
+                        match = re.match(r'(async\s+)?def\s+([a-zA-Z_][a-zA-Z0-9_]*)', stripped)
+                        if match:
+                            function_name = match.group(2)
+                            function_start = i + 1  # 轉為 1-based
+                            current_indent = indent
+                            break
+                
+                # 如果已經找到函式，記錄當前縮排
+                if current_indent is None and stripped:
+                    current_indent = indent
+            
+            # 如果找到函式，向下搜尋函式結束
+            function_end = None
+            if function_name and function_start:
+                base_indent = current_indent
+                for i in range(function_start, len(lines)):
+                    line = lines[i]
+                    stripped = line.lstrip()
+                    
+                    # 跳過空行和註釋
+                    if not stripped or stripped.startswith('#'):
+                        continue
+                    
+                    indent = len(line) - len(stripped)
+                    
+                    # 如果遇到相同或更小縮排的非空行（且不是 docstring 或多行字串）
+                    if indent <= base_indent:
+                        # 確認不是函式的第一行或 docstring
+                        if i > function_start:
+                            function_end = i  # 1-based，這行不包含在函式內
+                            break
+                
+                # 如果沒找到結束，表示函式到檔案結尾
+                if function_end is None:
+                    function_end = len(lines)
+            
+            return function_name, function_start, function_end
+            
+        except Exception as e:
+            logger.error(f"提取函式資訊失敗: {e}")
+            return None, None, None
 
 
 def main():

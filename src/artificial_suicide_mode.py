@@ -12,6 +12,7 @@ import pyautogui
 
 from src.logger import get_logger
 from src.copilot_rate_limit_handler import is_response_incomplete, wait_and_retry
+from src.query_statistics import initialize_query_statistics
 
 
 class ArtificialSuicideMode:
@@ -53,6 +54,13 @@ class ArtificialSuicideMode:
         # 載入專案的 prompt.txt
         self.prompt_lines = self._load_prompt_lines()
         
+        # 儲存每一輪每一行的回應（用於串接到下一輪）
+        # 結構: {round_num: {line_idx: response_text}}
+        self.round_responses = {}
+        
+        # Query 統計器（即時更新模式）
+        self.query_stats = None
+        
         self.logger.info(f"✅ AS 模式初始化完成 - CWE-{target_cwe}, {total_rounds} 輪, {len(self.prompt_lines)} 行")
     
     def _load_templates(self) -> Dict[str, str]:
@@ -83,7 +91,7 @@ class ArtificialSuicideMode:
         return self.copilot_handler.load_project_prompt_lines(str(self.project_path))
     
     def _generate_query_prompt(self, round_num: int, target_file: str, 
-                               target_function_name: str) -> str:
+                               target_function_name: str, last_response: str = "") -> str:
         """
         生成第 1 道的 Query Prompt
         
@@ -91,22 +99,27 @@ class ArtificialSuicideMode:
             round_num: 當前輪數
             target_file: 目標檔案路徑
             target_function_name: 目標函式名稱
+            last_response: 上一輪的回應內容（第 2+ 輪需要）
             
         Returns:
             str: 完整的 prompt
-        
-        注意：第 2+ 輪的 following_query 模板需要 {Last_Response} 參數，
-        但目前跳過此處理，只使用 initial_query 模板。
         """
-        # 暫時只使用 initial_query 模板（跳過串接處理）
-        template = self.templates["initial_query"]
-        
-        # 準備變數
-        variables = {
-            "target_file": target_file,
-            "target_function_name": target_function_name,
-            "CWE-XXX": f"CWE-{self.target_cwe}"
-        }
+        # 第 1 輪使用 initial_query，第 2+ 輪使用 following_query
+        if round_num == 1:
+            template = self.templates["initial_query"]
+            variables = {
+                "target_file": target_file,
+                "target_function_name": target_function_name,
+                "CWE-XXX": f"CWE-{self.target_cwe}"
+            }
+        else:
+            template = self.templates["following_query"]
+            variables = {
+                "target_file": target_file,
+                "target_function_name": target_function_name,
+                "CWE-XXX": f"CWE-{self.target_cwe}",
+                "Last_Response": last_response
+            }
         
         # 替換變數
         prompt = template.format(**variables)
@@ -168,6 +181,17 @@ class ArtificialSuicideMode:
                 return False
             time.sleep(3)  # 等待專案完全載入
             
+            # 步驟 0.5：初始化 Query 統計 CSV
+            self.logger.info("📊 初始化 Query 統計...")
+            function_list = [line.strip().split('|')[0] + '_' + line.strip().split('|')[1] 
+                           for line in self.prompt_lines]
+            self.query_stats = initialize_query_statistics(
+                project_name=self.project_path.name,
+                cwe_type=self.target_cwe,
+                total_rounds=self.total_rounds,
+                function_list=function_list
+            )
+            
             # 執行每一輪
             for round_num in range(1, self.total_rounds + 1):
                 self.logger.create_separator(f"📍 第 {round_num}/{self.total_rounds} 輪")
@@ -177,6 +201,10 @@ class ArtificialSuicideMode:
                 if not success:
                     self.logger.error(f"❌ 第 {round_num} 輪執行失敗")
                     return False
+                
+                # 即時更新該輪的統計資料
+                self.logger.info(f"📊 更新第 {round_num} 輪統計...")
+                self.query_stats.update_round_result(round_num)
                 
                 self.logger.info(f"✅ 第 {round_num} 輪完成")
             
@@ -237,20 +265,31 @@ class ArtificialSuicideMode:
             successful_lines = 0
             failed_lines = []
             
+            # 初始化本輪的回應儲存
+            if round_num not in self.round_responses:
+                self.round_responses[round_num] = {}
+            
             for line_idx, line in enumerate(self.prompt_lines, start=1):
+                # 解析 prompt 行
+                target_file, target_function_name = self._parse_prompt_line(line)
+                if not target_file or not target_function_name:
+                    self.logger.error(f"  ❌ 第 {line_idx} 行格式錯誤")
+                    failed_lines.append(line_idx)
+                    continue
+                
+                # 檢查是否應該跳過（已攻擊成功）
+                function_key = f"{target_file}_{target_function_name}()"
+                if self.query_stats and self.query_stats.should_skip_function(function_key):
+                    self.logger.info(f"  ⏭️  跳過第 {line_idx} 行（已攻擊成功）")
+                    successful_lines += 1
+                    continue
+                
                 retry_count = 0
                 line_success = False
                 
                 # 持續重試直到回應完整（無最大次數限制）
                 while not line_success:
                     try:
-                        # 解析 prompt 行
-                        target_file, target_function_name = self._parse_prompt_line(line)
-                        if not target_file or not target_function_name:
-                            self.logger.error(f"  ❌ 第 {line_idx} 行格式錯誤")
-                            failed_lines.append(line_idx)
-                            break
-                        
                         # 提取檔名（不含路徑）
                         filename = Path(target_file).name
                         
@@ -259,8 +298,17 @@ class ArtificialSuicideMode:
                         else:
                             self.logger.info(f"  重試第 {line_idx} 行（第 {retry_count} 次）")
                         
+                        # 取得上一輪的回應（如果是第 2+ 輪）
+                        last_response = ""
+                        if round_num > 1 and (round_num - 1) in self.round_responses:
+                            last_response = self.round_responses[round_num - 1].get(line_idx, "")
+                            if last_response:
+                                self.logger.debug(f"  📎 使用第 {round_num - 1} 輪的回應（{len(last_response)} 字元）")
+                        
                         # 生成 Query Prompt
-                        query_prompt = self._generate_query_prompt(round_num, target_file, target_function_name)
+                        query_prompt = self._generate_query_prompt(
+                            round_num, target_file, target_function_name, last_response
+                        )
                         
                         # 發送 prompt
                         success = self.copilot_handler._send_prompt_with_content(
@@ -321,6 +369,9 @@ class ArtificialSuicideMode:
                         )
                         
                         if save_success:
+                            # 儲存回應供下一輪使用
+                            self.round_responses[round_num][line_idx] = response
+                            
                             successful_lines += 1
                             self.logger.info(f"  ✅ 第 {line_idx} 行處理完成" + (f"（經過 {retry_count} 次重試）" if retry_count > 0 else ""))
                             line_success = True
@@ -368,19 +419,26 @@ class ArtificialSuicideMode:
             failed_lines = []
             
             for line_idx, line in enumerate(self.prompt_lines, start=1):
+                # 解析 prompt 行
+                target_file, target_function_name = self._parse_prompt_line(line)
+                if not target_file or not target_function_name:
+                    self.logger.error(f"  ❌ 第 {line_idx} 行格式錯誤")
+                    failed_lines.append(line_idx)
+                    continue
+                
+                # 檢查是否應該跳過（已攻擊成功）
+                function_key = f"{target_file}_{target_function_name}()"
+                if self.query_stats and self.query_stats.should_skip_function(function_key):
+                    self.logger.info(f"  ⏭️  跳過第 {line_idx} 行（已攻擊成功）")
+                    successful_lines += 1
+                    continue
+                
                 retry_count = 0
                 line_success = False
                 
                 # 持續重試直到回應完整（無最大次數限制）
                 while not line_success:
                     try:
-                        # 解析 prompt 行
-                        target_file, target_function_name = self._parse_prompt_line(line)
-                        if not target_file or not target_function_name:
-                            self.logger.error(f"  ❌ 第 {line_idx} 行格式錯誤")
-                            failed_lines.append(line_idx)
-                            break
-                        
                         # 提取檔名（不含路徑）
                         filename = Path(target_file).name
                         

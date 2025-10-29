@@ -44,10 +44,14 @@ class Config:
     VSCODE_COMMAND_DELAY = 1    # 命令執行間隔時間（秒）
     
     # ==================== Copilot Chat 相關設定 ====================
-    COPILOT_RESPONSE_TIMEOUT = 300   # Copilot 回應超時時間（秒）
+    COPILOT_RESPONSE_TIMEOUT = 3600   # Copilot 回應超時時間（秒）
     COPILOT_CHECK_INTERVAL = 3      # 檢查回應完成間隔（秒）
     COPILOT_COPY_RETRY_MAX = 3      # 複製回應重試次數
     COPILOT_COPY_RETRY_DELAY = 2    # 複製重試間隔（秒）
+    
+    # 模型切換設定
+    COPILOT_SWITCH_MODEL_ON_START = True  # 是否在開始時切換模型
+    COPILOT_MODEL_SWITCH_DELAY = 1  # 模型切換後的等待時間（秒）
     
     # 智能等待設定
     SMART_WAIT_ENABLED = True    # 是否啟用智能等待

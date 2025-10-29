@@ -37,10 +37,16 @@ def _clean_copilot_response(response: str) -> str:
     
     cleaned = response.strip()
     
-    # 移除已知的 Copilot 自動後綴
-    for suffix in _COPILOT_AUTO_SUFFIXES:
-        if cleaned.endswith(suffix):
-            cleaned = cleaned[:-len(suffix)].rstrip()
+    # 反覆移除已知的 Copilot 自動後綴，直到無法再移除為止
+    # 處理多個重複的 "Made changes." 情況
+    changed = True
+    while changed:
+        changed = False
+        for suffix in _COPILOT_AUTO_SUFFIXES:
+            if cleaned.endswith(suffix):
+                cleaned = cleaned[:-len(suffix)].rstrip()
+                changed = True  # 繼續檢查是否還有更多後綴
+                break  # 重新開始檢查（因為 rstrip 後長度已改變）
     
     return cleaned
 

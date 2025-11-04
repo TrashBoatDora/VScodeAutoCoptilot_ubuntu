@@ -6,7 +6,7 @@ Artificial Suicide 攻擊模式 - 輕量級控制器
 """
 
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 import time
 import pyautogui
 
@@ -28,7 +28,8 @@ class ArtificialSuicideMode:
     """
     
     def __init__(self, copilot_handler, vscode_controller, cwe_scan_manager, 
-                 error_handler, project_path: str, target_cwe: str, total_rounds: int):
+                 error_handler, project_path: str, target_cwe: str, total_rounds: int,
+                 max_files_limit: int = 0, files_processed_so_far: int = 0):
         """
         初始化 AS 模式控制器
         
@@ -40,6 +41,8 @@ class ArtificialSuicideMode:
             project_path: 專案路徑
             target_cwe: 目標 CWE 類型（如 "327"）
             total_rounds: 總輪數
+            max_files_limit: 最大檔案處理限制（0 表示無限制）
+            files_processed_so_far: 目前已處理的檔案數
         """
         self.logger = get_logger("ArtificialSuicide")
         self.copilot_handler = copilot_handler
@@ -50,11 +53,26 @@ class ArtificialSuicideMode:
         self.target_cwe = target_cwe
         self.total_rounds = total_rounds
         
+        # 檔案數量限制相關
+        self.max_files_limit = max_files_limit
+        self.files_processed_so_far = files_processed_so_far
+        self.files_processed_in_project = 0  # 本專案已處理的檔案數
+        
         # 載入模板
         self.templates = self._load_templates()
         
         # 載入專案的 prompt.txt
         self.prompt_lines = self._load_prompt_lines()
+        
+        # 如果有檔案數量限制，計算本專案可處理的行數
+        if self.max_files_limit > 0:
+            remaining_quota = self.max_files_limit - self.files_processed_so_far
+            if remaining_quota <= 0:
+                self.logger.warning(f"已達到檔案處理限制，將不處理任何檔案")
+                self.prompt_lines = []
+            elif len(self.prompt_lines) > remaining_quota:
+                self.logger.info(f"檔案數量限制: 僅處理前 {remaining_quota}/{len(self.prompt_lines)} 行")
+                self.prompt_lines = self.prompt_lines[:remaining_quota]
         
         # 儲存每一輪每一行的回應（用於串接到下一輪）
         # 結構: {round_num: {line_idx: response_text}}
@@ -210,12 +228,12 @@ class ArtificialSuicideMode:
         
         return (filepath, first_function)
     
-    def execute(self) -> bool:
+    def execute(self) -> Tuple[bool, int]:
         """
         執行完整的 AS 攻擊流程
         
         Returns:
-            bool: 是否成功完成
+            Tuple[bool, int]: (是否成功完成, 實際處理的檔案數)
         """
         try:
             self.logger.create_separator(f"🚀 開始 Artificial Suicide 攻擊 - CWE-{self.target_cwe}")
@@ -223,11 +241,16 @@ class ArtificialSuicideMode:
             self.logger.info(f"總輪數: {self.total_rounds}")
             self.logger.info(f"總行數: {len(self.prompt_lines)}")
             
+            # 如果沒有行要處理，直接返回
+            if len(self.prompt_lines) == 0:
+                self.logger.warning("⚠️  沒有要處理的檔案（已達限制或 prompt.txt 為空）")
+                return True, 0
+            
             # 步驟 0：開啟專案
             self.logger.info("📂 開啟專案到 VSCode...")
             if not self.vscode_controller.open_project(str(self.project_path)):
                 self.logger.error("❌ 無法開啟專案")
-                return False
+                return False, 0
             time.sleep(3)  # 等待專案完全載入
             
             # 步驟 0.5：初始化 Query 統計 CSV
@@ -273,12 +296,16 @@ class ArtificialSuicideMode:
                 
                 self.logger.info(f"✅ 第 {round_num} 輪完成")
             
+            # 記錄本專案實際處理的檔案數
+            self.files_processed_in_project = len(self.prompt_lines)
+            
             self.logger.create_separator("🎉 Artificial Suicide 攻擊完成")
-            return True
+            self.logger.info(f"📊 本專案處理了 {self.files_processed_in_project} 個檔案")
+            return True, self.files_processed_in_project
             
         except Exception as e:
             self.logger.error(f"❌ AS 模式執行錯誤: {e}")
-            return False
+            return False, self.files_processed_in_project
     
     def _execute_round(self, round_num: int) -> bool:
         """

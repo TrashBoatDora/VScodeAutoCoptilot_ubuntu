@@ -7,7 +7,7 @@ Hybrid UI Automation Script - 主控制腳本
 import time
 import sys
 from pathlib import Path
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Tuple
 from datetime import datetime
 
 # 設定模組搜尋路徑
@@ -64,6 +64,10 @@ class HybridUIAutomationScript:
         self.skipped_projects = 0
         self.start_time = None
         
+        # 檔案處理計數器
+        self.total_files_processed = 0  # 已處理的檔案數（累計所有專案的 prompt.txt 行數）
+        self.max_files_limit = 0  # 最大處理檔案數限制（0 表示無限制）
+        
         self.logger.info("混合式 UI 自動化腳本初始化完成")
     
     def run(self) -> bool:
@@ -79,7 +83,15 @@ class HybridUIAutomationScript:
             
             # 顯示選項對話框（包含專案選擇和 Artificial Suicide 設定）
             (selected_projects, self.use_smart_wait, clean_history, 
-             artificial_suicide_enabled, artificial_suicide_rounds) = self.ui_manager.show_options_dialog()
+             artificial_suicide_enabled, artificial_suicide_rounds,
+             max_files_to_process) = self.ui_manager.show_options_dialog()
+            
+            # 設定檔案數量限制
+            self.max_files_limit = max_files_to_process
+            if self.max_files_limit > 0:
+                self.logger.info(f"📊 檔案數量限制已啟用: 最多處理 {self.max_files_limit} 個檔案")
+            else:
+                self.logger.info("📊 檔案數量限制未啟用: 將處理所有選定專案")
             
             # 如果需要清理歷史記錄
             if clean_history and selected_projects:
@@ -288,6 +300,38 @@ class HybridUIAutomationScript:
                     self.logger.warning("收到緊急停止請求，中止專案處理")
                     break
                 
+                # 檢查檔案數量限制（在處理專案前）
+                if self.max_files_limit > 0:
+                    # 計算此專案的檔案數量（prompt.txt 行數）
+                    project_file_count = config.count_project_prompt_lines(project.path)
+                    
+                    if project_file_count == 0:
+                        self.logger.warning(f"專案 {project.name} 沒有 prompt.txt 或檔案為空，跳過")
+                        self.skipped_projects += 1
+                        continue
+                    
+                    # 檢查是否會超過限制
+                    if self.total_files_processed >= self.max_files_limit:
+                        self.logger.warning(
+                            f"⚠️  已達到檔案數量限制 ({self.total_files_processed}/{self.max_files_limit})，"
+                            f"停止處理剩餘 {len(projects) - i + 1} 個專案"
+                        )
+                        self.skipped_projects += (len(projects) - i + 1)
+                        break
+                    
+                    # 如果處理此專案會超過限制，則部分處理
+                    remaining_quota = self.max_files_limit - self.total_files_processed
+                    if project_file_count > remaining_quota:
+                        self.logger.info(
+                            f"📊 專案 {project.name} 有 {project_file_count} 個檔案，"
+                            f"但只剩 {remaining_quota} 個配額，將只處理前 {remaining_quota} 個檔案"
+                        )
+                    else:
+                        self.logger.info(
+                            f"📊 專案 {project.name} 有 {project_file_count} 個檔案"
+                            f"（已處理: {self.total_files_processed}/{self.max_files_limit}）"
+                        )
+                
                 # 處理單一專案
                 success = self._process_single_project(project)
                 
@@ -306,6 +350,9 @@ class HybridUIAutomationScript:
             # 處理摘要
             elapsed = time.time() - start_time
             self.logger.info(f"專案處理完成: 成功 {total_success}, 失敗 {total_failed}, 耗時 {elapsed:.1f}秒")
+            
+            if self.max_files_limit > 0:
+                self.logger.info(f"📊 檔案處理統計: {self.total_files_processed}/{self.max_files_limit}")
             
             return True
             
@@ -417,7 +464,11 @@ class HybridUIAutomationScript:
             if artificial_suicide_mode:
                 # 使用 Artificial Suicide 攻擊模式
                 project_logger.log(f"處理 Copilot Chat (Artificial Suicide 攻擊模式，輪數: {artificial_suicide_rounds})")
-                success = self._execute_artificial_suicide_mode(project, artificial_suicide_rounds, project_logger)
+                success, files_processed = self._execute_artificial_suicide_mode(project, artificial_suicide_rounds, project_logger)
+                
+                # 更新檔案計數器
+                self.total_files_processed += files_processed
+                self.logger.info(f"📊 已處理 {files_processed} 個檔案（總計: {self.total_files_processed}）")
                 
                 if not success:
                     raise AutomationError("Artificial Suicide 模式執行失敗", ErrorType.COPILOT_ERROR)
@@ -425,6 +476,11 @@ class HybridUIAutomationScript:
                 # 使用反覆互動功能
                 project_logger.log(f"處理 Copilot Chat (啟用反覆互動功能，最大輪數: {max_rounds})")
                 success = self.copilot_handler.process_project_with_iterations(project.path, max_rounds)
+                
+                # 更新檔案計數器（根據 prompt.txt 行數）
+                files_in_project = config.count_project_prompt_lines(project.path)
+                self.total_files_processed += files_in_project
+                self.logger.info(f"📊 已處理 {files_in_project} 個檔案（總計: {self.total_files_processed}）")
                 
                 if not success:
                     raise AutomationError("Copilot 反覆互動處理失敗", ErrorType.COPILOT_ERROR)
@@ -434,6 +490,11 @@ class HybridUIAutomationScript:
                 success, error_msg = self.copilot_handler.process_project_complete(
                     project.path, use_smart_wait=self.use_smart_wait
                 )
+                
+                # 更新檔案計數器（根據 prompt.txt 行數）
+                files_in_project = config.count_project_prompt_lines(project.path)
+                self.total_files_processed += files_in_project
+                self.logger.info(f"📊 已處理 {files_in_project} 個檔案（總計: {self.total_files_processed}）")
                 
                 if not success:
                     raise AutomationError(
@@ -540,7 +601,7 @@ class HybridUIAutomationScript:
         project: ProjectInfo, 
         num_rounds: int,
         project_logger
-    ) -> bool:
+    ) -> Tuple[bool, int]:
         """
         執行 Artificial Suicide 攻擊模式
         
@@ -550,7 +611,7 @@ class HybridUIAutomationScript:
             project_logger: 專案日誌記錄器
             
         Returns:
-            bool: 執行是否成功
+            Tuple[bool, int]: (執行是否成功, 實際處理的檔案數)
         """
         try:
             # 導入 ArtificialSuicideMode（輕量級控制器）
@@ -573,7 +634,7 @@ class HybridUIAutomationScript:
             
             self.logger.info(f"初始化 Artificial Suicide Mode: 專案={project_name}, CWE-{target_cwe}, 輪數={num_rounds}")
             
-            # 初始化 ArtificialSuicideMode（直接利用現有模組）
+            # 初始化 ArtificialSuicideMode（直接利用現有模組，並傳遞檔案限制）
             as_mode = ArtificialSuicideMode(
                 copilot_handler=self.copilot_handler,
                 vscode_controller=self.vscode_controller,
@@ -581,21 +642,23 @@ class HybridUIAutomationScript:
                 error_handler=self.error_handler,
                 project_path=str(project.path),
                 target_cwe=target_cwe,
-                total_rounds=num_rounds
+                total_rounds=num_rounds,
+                max_files_limit=self.max_files_limit,
+                files_processed_so_far=self.total_files_processed
             )
             
             # 執行攻擊流程
             self.logger.info("開始執行 Artificial Suicide 攻擊流程...")
-            success = as_mode.execute()
+            success, files_processed = as_mode.execute()
             
             if success:
-                project_logger.log("✅ Artificial Suicide 攻擊模式執行成功")
-                self.logger.info("Artificial Suicide 攻擊模式執行成功")
+                project_logger.log(f"✅ Artificial Suicide 攻擊模式執行成功（處理了 {files_processed} 個檔案）")
+                self.logger.info(f"Artificial Suicide 攻擊模式執行成功（處理了 {files_processed} 個檔案）")
             else:
-                project_logger.log("❌ Artificial Suicide 攻擊模式執行失敗")
-                self.logger.error("Artificial Suicide 攻擊模式執行失敗")
+                project_logger.log(f"❌ Artificial Suicide 攻擊模式執行失敗（已處理 {files_processed} 個檔案）")
+                self.logger.error(f"Artificial Suicide 攻擊模式執行失敗（已處理 {files_processed} 個檔案）")
             
-            return success
+            return success, files_processed
             
         except Exception as e:
             error_msg = f"Artificial Suicide 模式執行時發生錯誤: {e}"
@@ -603,7 +666,7 @@ class HybridUIAutomationScript:
             project_logger.log(f"❌ {error_msg}")
             import traceback
             traceback.print_exc()
-            return False
+            return False, 0
     
     def _execute_cwe_scan(self, project: ProjectInfo, project_logger) -> bool:
         """

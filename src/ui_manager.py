@@ -23,17 +23,18 @@ class UIManager:
         self.clean_history = True  # 是否清理歷史記錄
         self.artificial_suicide_enabled = False  # 是否啟用 Artificial Suicide 模式
         self.artificial_suicide_rounds = 3  # Artificial Suicide 攻擊輪數
+        self.max_files_to_process = 0  # 限制總處理檔案數（0 表示無限制）
         
     def show_options_dialog(self) -> tuple:
         """
         顯示選項對話框，讓使用者選擇執行選項
         
         Returns:
-            tuple: (選中的專案集合, 是否使用智能等待, 是否清理歷史, 是否啟用Artificial Suicide, Artificial Suicide輪數)
+            tuple: (選中的專案集合, 是否使用智能等待, 是否清理歷史, 是否啟用Artificial Suicide, Artificial Suicide輪數, 最大處理檔案數)
         """
         root = tk.Tk()
         root.title("自動化腳本設定")
-        root.geometry("480x650")  # 增加視窗高度以容納新選項
+        root.geometry("480x750")  # 增加視窗高度以容納新選項
         root.resizable(False, False)  # 固定視窗大小，防止使用者調整大小
         
         # 設定視窗樣式
@@ -166,6 +167,50 @@ class UIManager:
         self._as_var = as_var
         self._as_rounds_var = as_rounds_var
         
+        # === 檔案數量限制設定 ===
+        limit_frame = ttk.LabelFrame(frame, text="📊 檔案數量限制", padding=10)
+        limit_frame.pack(fill=tk.X, pady=10)
+        
+        # 啟用檔案數量限制勾選框
+        limit_enabled_var = tk.BooleanVar(value=False)
+        limit_checkbox = ttk.Checkbutton(
+            limit_frame,
+            text="限制總共處理的檔案數量",
+            variable=limit_enabled_var,
+            command=lambda: self._update_limit_state(limit_enabled_var.get(), limit_spinbox)
+        )
+        limit_checkbox.pack(anchor=tk.W, pady=5)
+        
+        # 檔案數量設定
+        limit_count_frame = ttk.Frame(limit_frame)
+        limit_count_frame.pack(fill=tk.X, pady=5)
+        
+        ttk.Label(limit_count_frame, text="最大處理檔案數:").pack(side=tk.LEFT, padx=(20, 5))
+        limit_count_var = tk.IntVar(value=100)
+        limit_spinbox = ttk.Spinbox(
+            limit_count_frame,
+            from_=1,
+            to=10000,
+            textvariable=limit_count_var,
+            width=8,
+            state="disabled"  # 初始為禁用
+        )
+        limit_spinbox.pack(side=tk.LEFT)
+        
+        # 檔案數量限制說明
+        limit_desc = """說明：
+• 此設定用於限制總共處理的檔案數量（基於所有專案的 prompt.txt 行數累計）
+• 每個 prompt.txt 中的 1 行 = 處理 1 個檔案（與輪數無關）
+• 設為 0 表示無限制，將處理所有選定專案的所有檔案
+• 達到限制後將停止處理剩餘的專案"""
+        
+        limit_desc_label = ttk.Label(limit_frame, text=limit_desc, wraplength=430, foreground="gray")
+        limit_desc_label.pack(pady=5, fill=tk.X)
+        
+        # 儲存變數以供回調使用
+        self._limit_enabled_var = limit_enabled_var
+        self._limit_count_var = limit_count_var
+        
         # 說明文字
         description = """
         • 瀏覽專案: 
@@ -194,6 +239,13 @@ class UIManager:
             self.smart_wait_selected = wait_var.get()
             self.artificial_suicide_enabled = as_var.get()
             self.artificial_suicide_rounds = as_rounds_var.get()
+            
+            # 處理檔案數量限制
+            if limit_enabled_var.get():
+                self.max_files_to_process = limit_count_var.get()
+            else:
+                self.max_files_to_process = 0  # 0 表示無限制
+            
             self.choice_made = True
             root.destroy()
         
@@ -221,7 +273,8 @@ class UIManager:
             self.smart_wait_selected, 
             self.clean_history,
             self.artificial_suicide_enabled,
-            self.artificial_suicide_rounds
+            self.artificial_suicide_rounds,
+            self.max_files_to_process
         )
     
     def _update_as_state(self, enabled: bool, spinbox, wait_frame):
@@ -247,6 +300,21 @@ class UIManager:
             for child in wait_frame.winfo_children():
                 if isinstance(child, ttk.Radiobutton):
                     child.configure(state="normal")
+    
+    def _update_limit_state(self, enabled: bool, spinbox):
+        """
+        更新檔案數量限制狀態
+        
+        Args:
+            enabled: 是否啟用
+            spinbox: 數量選擇器
+        """
+        if enabled:
+            # 啟用數量設定
+            spinbox.configure(state="normal")
+        else:
+            # 禁用數量設定
+            spinbox.configure(state="disabled")
     
     def execute_reset_if_needed(self, should_reset: bool) -> bool:
         """

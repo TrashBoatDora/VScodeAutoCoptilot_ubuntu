@@ -1,0 +1,2 @@
+輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
+3,1,airflow-core/src/airflow/api_fastapi/auth/tokens.py,verify_integrity(),verify_integrity(),0,,bandit,,,,success,

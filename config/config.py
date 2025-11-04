@@ -83,6 +83,9 @@ class Config:
     # CopilotChat 修改結果處理設定
     COPILOT_CHAT_MODIFICATION_ACTION = "keep"  # 預設行為：'keep'(保留) 或 'revert'(復原)
     
+    # ==================== 檔案處理限制設定 ====================
+    MAX_FILES_TO_PROCESS = None  # 限制總共處理的檔案數量（None 表示無限制）
+    
     # ==================== 日誌設定 ====================
     LOG_LEVEL = "DEBUG"      # 日誌等級：DEBUG, INFO, WARNING, ERROR
     LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"

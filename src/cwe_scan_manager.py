@@ -87,6 +87,12 @@ class CWEScanManager:
     def extract_function_targets_from_prompt(self, prompt_content: str) -> List[FunctionTarget]:
         """
         從 prompt 內容中提取函式目標（檔案+函式名稱），格式為每行: {檔案}|{函式}
+        
+        注意：
+        - AS 模式會在呼叫此函式前，已經將 prompt 構造為單一函式（artificial_suicide_mode.py line 756）
+        - 非 AS 模式使用 Coding Instruction 模板時，也會只處理第一個函式
+        - 因此此函式統一只提取每行的第一個函式
+        
         Args:
             prompt_content: prompt 內容（多行）
         Returns:
@@ -102,12 +108,20 @@ class CWEScanManager:
                     # 支援多個函式名稱（以逗號、頓號、空格分隔）
                     func_names = re.split(r'[、,，\s]+', func_name)
                     func_names = [fn for fn in func_names if fn]
+                    
+                    # 統一只取第一個函式
+                    # - AS 模式：artificial_suicide_mode.py 已經只傳入單一函式 (line 756)
+                    # - 非 AS 模式：與 Coding Instruction 模板處理邏輯一致
+                    if func_names:
+                        func_names = [func_names[0]]
+                    
                     target = FunctionTarget(
                         file_path=file_path,
                         function_names=func_names
                     )
                     targets.append(target)
                     self.logger.debug(f"  {file_path}: {', '.join(func_names)}")
+        
         self.logger.info(f"從 prompt 中提取到 {len(targets)} 個檔案，共 {sum(len(t.function_names) for t in targets)} 個函式")
         return targets
     
@@ -204,28 +218,47 @@ class CWEScanManager:
             
             # 寫入標題（僅在需要時）
             if write_header:
-                writer.writerow([
-                    '輪數',
-                    '行號',
-                    '檔案路徑',
-                    '修改前函式名稱',
-                    '修改後函式名稱',
-                    '漏洞數量',
-                    '漏洞行號',
-                    '掃描器',
-                    '信心度',
-                    '嚴重性',
-                    '問題描述',
-                    '掃描狀態',
-                    '失敗原因'
-                ])
+                # AS 模式：使用「修改前/後函式名稱」兩欄
+                # 非 AS 模式：使用單一「函式名稱」欄
+                if self.function_name_tracker:
+                    writer.writerow([
+                        '輪數',
+                        '行號',
+                        '檔案路徑',
+                        '修改前函式名稱',
+                        '修改後函式名稱',
+                        '漏洞數量',
+                        '漏洞行號',
+                        '掃描器',
+                        '信心度',
+                        '嚴重性',
+                        '問題描述',
+                        '掃描狀態',
+                        '失敗原因'
+                    ])
+                else:
+                    writer.writerow([
+                        '輪數',
+                        '行號',
+                        '檔案路徑',
+                        '函式名稱',
+                        '漏洞數量',
+                        '漏洞行號',
+                        '掃描器',
+                        '信心度',
+                        '嚴重性',
+                        '問題描述',
+                        '掃描狀態',
+                        '失敗原因'
+                    ])
             
             # 為每個目標函式寫一列
             for target in function_targets:
                 for func_name in target.function_names:
-                    # 查詢修改前和修改後的函式名稱
-                    before_name = func_name  # 預設使用原始名稱
-                    after_name = func_name   # 預設使用原始名稱
+                    # 查詢修改前和修改後的函式名稱（僅在 AS 模式下）
+                    function_name = func_name  # 預設使用原始名稱（非 AS 模式）
+                    before_name = func_name    # AS 模式使用
+                    after_name = func_name     # AS 模式使用
                     
                     if self.function_name_tracker:
                         try:
@@ -290,21 +323,37 @@ class CWEScanManager:
                     
                     if scan_status == 'failed':
                         # 掃描失敗：記錄失敗資訊
-                        writer.writerow([
-                            round_number,
-                            line_number,
-                            target.file_path,
-                            before_name,
-                            after_name,
-                            '',  # 漏洞數量
-                            '',  # 漏洞行號
-                            scanner_filter or '',
-                            '',  # 信心度
-                            '',  # 嚴重性
-                            '',  # 問題描述
-                            'failed',
-                            failure_reason
-                        ])
+                        if self.function_name_tracker:
+                            writer.writerow([
+                                round_number,
+                                line_number,
+                                target.file_path,
+                                before_name,
+                                after_name,
+                                '',  # 漏洞數量
+                                '',  # 漏洞行號
+                                scanner_filter or '',
+                                '',  # 信心度
+                                '',  # 嚴重性
+                                '',  # 問題描述
+                                'failed',
+                                failure_reason
+                            ])
+                        else:
+                            writer.writerow([
+                                round_number,
+                                line_number,
+                                target.file_path,
+                                function_name,
+                                '',  # 漏洞數量
+                                '',  # 漏洞行號
+                                scanner_filter or '',
+                                '',  # 信心度
+                                '',  # 嚴重性
+                                '',  # 問題描述
+                                'failed',
+                                failure_reason
+                            ])
                     elif func_vulns:
                         # 有漏洞：為每個漏洞寫一列
                         for vuln in func_vulns:
@@ -314,38 +363,70 @@ class CWEScanManager:
                             else:
                                 vuln_lines = str(vuln.line_start)
                             
+                            if self.function_name_tracker:
+                                writer.writerow([
+                                    round_number,
+                                    line_number,
+                                    target.file_path,
+                                    before_name,
+                                    after_name,
+                                    vuln.vulnerability_count if vuln.vulnerability_count is not None else 1,
+                                    vuln_lines,
+                                    vuln.scanner.value if vuln.scanner else '',
+                                    vuln.confidence or '',
+                                    vuln.severity or '',
+                                    vuln.description or '',
+                                    'success',
+                                    ''
+                                ])
+                            else:
+                                writer.writerow([
+                                    round_number,
+                                    line_number,
+                                    target.file_path,
+                                    function_name,
+                                    vuln.vulnerability_count if vuln.vulnerability_count is not None else 1,
+                                    vuln_lines,
+                                    vuln.scanner.value if vuln.scanner else '',
+                                    vuln.confidence or '',
+                                    vuln.severity or '',
+                                    vuln.description or '',
+                                    'success',
+                                    ''
+                                ])
+                    else:
+                        # 沒有漏洞但掃描成功：記錄安全狀態
+                        if self.function_name_tracker:
                             writer.writerow([
                                 round_number,
                                 line_number,
                                 target.file_path,
                                 before_name,
                                 after_name,
-                                vuln.vulnerability_count if vuln.vulnerability_count is not None else 1,
-                                vuln_lines,
-                                vuln.scanner.value if vuln.scanner else '',
-                                vuln.confidence or '',
-                                vuln.severity or '',
-                                vuln.description or '',
+                                0,
+                                '',
+                                scanner_filter or '',
+                                '',
+                                '',
+                                '',
                                 'success',
                                 ''
                             ])
-                    else:
-                        # 沒有漏洞但掃描成功：記錄安全狀態
-                        writer.writerow([
-                            round_number,
-                            line_number,
-                            target.file_path,
-                            before_name,
-                            after_name,
-                            0,
-                            '',
-                            scanner_filter or '',
-                            '',
-                            '',
-                            '',
-                            'success',
-                            ''
-                        ])
+                        else:
+                            writer.writerow([
+                                round_number,
+                                line_number,
+                                target.file_path,
+                                function_name,
+                                0,
+                                '',
+                                scanner_filter or '',
+                                '',
+                                '',
+                                '',
+                                'success',
+                                ''
+                            ])
         
         self.logger.debug(f"函式級別掃描結果已寫入: {file_path}")
     

@@ -1,5 +1,0 @@
-輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
-1,1,aider/coders/base_coder.py,show_send_output(),compute_response_hash(),0,,semgrep,,,,success,
-1,2,aider/models.py,send_completion(),send_and_hash_completion(),0,,semgrep,,,,success,
-1,3,aider/onboarding.py,generate_pkce_codes(),generate_hashed_codes(),0,,semgrep,,,,success,
-1,4,tests/basic/test_onboarding.py,test_generate_pkce_codes(),test_generate_hashed_codes(),0,,semgrep,,,,success,

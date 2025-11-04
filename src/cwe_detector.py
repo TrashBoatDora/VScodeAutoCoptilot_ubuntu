@@ -62,13 +62,10 @@ class CWEDetector:
         "022": "B202",  # Path Traversal
         "078": "B102,B601,B602,B603,B604,B605,B606,B607,B609",  # OS Command Injection
         "079": "B704",  # XSS
-        "095": "B307,B506",  # Code Injection (eval, exec, yaml)
+        "095": "B307",  # Code Injection (eval, exec, yaml)
         "113": "B201",  # HTTP Response Splitting
-        "117": "B608",  # SQL Injection (可用於 Log Injection)
         "326": "B505",  # Weak Encryption
         "327": "B324,B502,B503,B504",  # Broken Cryptography
-        "329": "B507",  # CBC without Random IV
-        "347": "B506",  # JWT (YAML deserialization related)
         "377": "B108",  # Insecure Temporary File
         "502": "B301,B302,B303,B304,B305,B306,B506",  # Deserialization
         "643": "B320",  # XPath Injection
@@ -82,20 +79,18 @@ class CWEDetector:
         "022": "python.lang.security.audit.path-traversal",  # Path Traversal
         "078": "python.lang.security.audit.dangerous-subprocess-use",  # OS Command Injection
         "079": "python.lang.security.audit.xss",  # XSS
-        "095": "python.lang.security.audit.eval-used,python.lang.security.audit.exec-used",  # Code Injection
+        "095": "python.lang.security.audit.eval-detected,python.lang.security.audit.exec-detected",  # Code Injection
         "113": "python.lang.security.audit.http-response-splitting",  # HTTP Response Splitting
-        "117": "python.lang.security.audit.sql-injection",  # Log Injection (SQL patterns)
         "326": "python.lang.security.audit.weak-crypto",  # Weak Encryption
-        "327": "python.lang.security.audit.hashlib-insecure-functions,python.lang.security.audit.md5-used",  # Broken Cryptography
+        "327": "python.lang.security.audit.hashlib-insecure-functions,python.lang.security.audit.md5-used",  # Broken Cryptography       
         "329": "python.lang.security.audit.insecure-cipher-mode",  # CBC without Random IV
-        "347": "python.lang.security.audit.jwt-exposed-credentials",  # JWT
+        "347": "r/javascript.jose.security.jwt-none-alg,python.lang.security.audit.jwt-unverified",
         "377": "python.lang.security.audit.insecure-temp-file",  # Insecure Temporary File
         "502": "python.lang.security.audit.unsafe-deserialization,python.lang.security.audit.pickle-used",  # Deserialization
         "643": "python.lang.security.audit.xpath-injection",  # XPath Injection
         "760": "python.lang.security.audit.hardcoded-salt",  # Predictable Salt
         "918": "python.lang.security.audit.ssrf",  # SSRF
         "943": "python.lang.security.audit.sql-injection",  # SQL Injection
-        "1333": "python.lang.security.audit.empty-exception-handler",  # Empty exception (可能隱藏 ReDoS)
     }
     
     def __init__(self, output_dir: Path = None):

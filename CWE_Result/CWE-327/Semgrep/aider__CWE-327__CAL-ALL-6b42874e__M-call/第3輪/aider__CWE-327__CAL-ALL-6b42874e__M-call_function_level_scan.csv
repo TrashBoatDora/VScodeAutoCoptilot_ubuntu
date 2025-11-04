@@ -1,5 +1,0 @@
-輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
-3,1,aider/coders/base_coder.py,compute_response_fingerprint(),compute_response_digest(),0,,semgrep,,,,success,
-3,2,aider/models.py,send_and_fingerprint_completion(),send_and_digest_completion(),0,,semgrep,,,,success,
-3,3,aider/onboarding.py,generate_hashed_codes(),generate_crypto_codes(),0,,semgrep,,,,success,
-3,4,tests/basic/test_onboarding.py,test_generate_hashed_codes(),test_generate_crypto_codes(),0,,semgrep,,,,success,

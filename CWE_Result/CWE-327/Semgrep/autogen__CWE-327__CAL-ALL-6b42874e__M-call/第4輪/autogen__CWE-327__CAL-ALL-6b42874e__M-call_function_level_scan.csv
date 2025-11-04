@@ -1,7 +1,0 @@
-輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
-4,1,python/packages/agbench/src/agbench/linter/_base.py,__hash__(),__hash__(),0,,semgrep,,,,success,
-4,4,python/packages/autogen-ext/src/autogen_ext/code_executors/docker/_docker_code_executor.py,_execute_code_dont_check_setup(),_execute_code_dont_check_setup(),0,,semgrep,,,,success,
-4,5,python/packages/autogen-ext/src/autogen_ext/code_executors/local/__init__.py,_execute_code_dont_check_setup(),_execute_code_dont_check_setup(),0,,semgrep,,,,success,
-4,6,python/packages/autogen-ext/src/autogen_ext/experimental/task_centric_memory/utils/_functions.py,hash_directory(),hash_directory(),0,,semgrep,,,,success,
-4,8,python/packages/autogen-studio/autogenstudio/web/auth/manager.py,authenticate_request(),authenticate_request(),0,,semgrep,,,,success,
-4,9,python/packages/autogen-studio/autogenstudio/web/auth/wsauth.py,authenticate(),authenticate(),0,,semgrep,,,,success,

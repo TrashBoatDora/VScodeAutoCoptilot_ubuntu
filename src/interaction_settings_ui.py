@@ -59,7 +59,8 @@ class InteractionSettingsUI:
             "include_previous_response": interaction_settings.get("include_previous_response", config.INTERACTION_INCLUDE_PREVIOUS_RESPONSE),
             "round_delay": interaction_settings.get("round_delay", config.INTERACTION_ROUND_DELAY),
             "copilot_chat_modification_action": interaction_settings.get("copilot_chat_modification_action", config.COPILOT_CHAT_MODIFICATION_ACTION),
-            "prompt_source_mode": interaction_settings.get("prompt_source_mode", config.PROMPT_SOURCE_MODE)  # 提示詞來源模式
+            "prompt_source_mode": interaction_settings.get("prompt_source_mode", config.PROMPT_SOURCE_MODE),  # 提示詞來源模式
+            "use_coding_instruction": interaction_settings.get("use_coding_instruction", False)  # Coding Instruction 模板
         }
     
     def create_scrollable_frame(self):
@@ -154,7 +155,8 @@ class InteractionSettingsUI:
                 "round_delay": self.settings["round_delay"],
                 "show_ui_on_startup": True,
                 "copilot_chat_modification_action": self.settings["copilot_chat_modification_action"],
-                "prompt_source_mode": self.settings["prompt_source_mode"]  # 提示詞來源模式
+                "prompt_source_mode": self.settings["prompt_source_mode"],  # 提示詞來源模式
+                "use_coding_instruction": self.settings.get("use_coding_instruction", False)  # Coding Instruction 模板
             }
             
             return settings_manager.update_interaction_settings(interaction_settings)
@@ -270,6 +272,45 @@ class InteractionSettingsUI:
         
         # 更新說明內容
         self.update_prompt_source_explanation()
+        
+        # === Coding Instruction 模板選項（僅在專案模式下可用）===
+        self.coding_instruction_frame = ttk.Frame(prompt_source_frame)
+        self.coding_instruction_frame.pack(fill="x", padx=10, pady=5)
+        
+        self.use_coding_instruction_var = tk.BooleanVar(
+            value=self.settings.get("use_coding_instruction", False)
+        )
+        
+        self.coding_instruction_checkbox = ttk.Checkbutton(
+            self.coding_instruction_frame,
+            text="使用 Coding Instruction 模板（解析 prompt.txt 並套用 coding_instruction.txt）",
+            variable=self.use_coding_instruction_var
+        )
+        self.coding_instruction_checkbox.pack(anchor="w", pady=2)
+        
+        # Coding Instruction 說明
+        coding_instruction_explanation_text = tk.Text(
+            self.coding_instruction_frame,
+            height=3,
+            width=60,
+            wrap="word",
+            state="disabled",
+            bg=self.root.cget("bg"),
+            font=("Arial", 9)
+        )
+        coding_instruction_explanation_text.pack(padx=20, pady=2, fill="x")
+        
+        coding_instruction_explanation = """說明：
+• 啟用時：解析 prompt.txt 每行（格式：filepath|function1()、function2()），只取第一個函式
+• 將檔案路徑和函式名稱套用到 assets/prompt-template/coding_instruction.txt 模板中發送
+• 適合需要統一格式的程式碼生成任務"""
+        
+        coding_instruction_explanation_text.config(state="normal")
+        coding_instruction_explanation_text.insert("1.0", coding_instruction_explanation)
+        coding_instruction_explanation_text.config(state="disabled")
+        
+        # 根據初始的 prompt_source_mode 設定是否啟用 Coding Instruction 選項
+        self.update_coding_instruction_state()
         
         # 回應串接設定框架
         chaining_frame = ttk.LabelFrame(main_frame, text="回應串接設定")
@@ -435,6 +476,7 @@ class InteractionSettingsUI:
         self.settings["round_delay"] = config.INTERACTION_ROUND_DELAY  # 使用預設值
         self.settings["copilot_chat_modification_action"] = self.modification_action_var.get()
         self.settings["prompt_source_mode"] = self.prompt_source_var.get()
+        self.settings["use_coding_instruction"] = self.use_coding_instruction_var.get()  # 新增
         
         # 如果選擇專案模式，需要再次驗證所有專案都有提示詞
         if self.settings["prompt_source_mode"] == "project":
@@ -464,10 +506,21 @@ class InteractionSettingsUI:
     def on_prompt_source_changed(self):
         """當提示詞來源選項改變時"""
         self.update_prompt_source_explanation()
+        self.update_coding_instruction_state()  # 更新 Coding Instruction 選項的可用狀態
         
         # 如果選擇專案專用提示詞，需要驗證專案是否都有 prompt.txt
         if self.prompt_source_var.get() == "project":
             self.validate_project_prompts()
+    
+    def update_coding_instruction_state(self):
+        """根據 prompt_source_mode 更新 Coding Instruction 選項的啟用狀態"""
+        if self.prompt_source_var.get() == "project":
+            # 專案模式：啟用 Coding Instruction 選項
+            self.coding_instruction_checkbox.config(state="normal")
+        else:
+            # 全域模式：停用 Coding Instruction 選項並取消勾選
+            self.coding_instruction_checkbox.config(state="disabled")
+            self.use_coding_instruction_var.set(False)
     
     def update_prompt_source_explanation(self):
         """更新提示詞來源說明"""

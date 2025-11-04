@@ -378,6 +378,83 @@ class CopilotHandler:
             self.logger.copilot_interaction(f"發送第 {line_number} 行提示詞", "ERROR", str(e))
             return False
     
+    def _parse_and_extract_first_function(self, prompt_line: str) -> tuple:
+        """
+        解析 prompt.txt 的單行並提取第一個函式
+        格式: filepath|function1()、function2()、function3()（多個函數用中文頓號分隔）
+        只取第一個函數
+        
+        此函數複用 AS 模式的解析邏輯
+        
+        Args:
+            prompt_line: prompt.txt 中的單行內容
+            
+        Returns:
+            (filepath, first_function_name): 檔案路徑和第一個函式名稱
+        """
+        parts = prompt_line.strip().split('|')
+        if len(parts) != 2:
+            self.logger.warning(f"Prompt 格式錯誤（應為 filepath|function_name）: {prompt_line}")
+            return ("", "")
+        
+        filepath = parts[0].strip()
+        functions_part = parts[1].strip()
+        
+        # 分隔多個函數（使用中文頓號「、」）
+        functions = []
+        if '、' in functions_part:
+            functions = [f.strip() for f in functions_part.split('、')]
+        else:
+            # 如果沒有分隔符，就是單一函數
+            functions = [functions_part]
+        
+        # 取第一個函數
+        first_function = functions[0].strip()
+        
+        # 確保函數名稱包含括號（如果沒有則添加）
+        if not first_function.endswith('()'):
+            first_function = first_function + '()'
+        
+        self.logger.debug(f"解析 prompt: {filepath} | {first_function} (共 {len(functions)} 個函數，只取第一個)")
+        
+        return (filepath, first_function)
+    
+    def _apply_coding_instruction_template(self, filepath: str, function_name: str) -> str:
+        """
+        將檔案路徑和函式名稱套用到 coding_instruction.txt 模板中
+        
+        Args:
+            filepath: 目標檔案路徑
+            function_name: 目標函式名稱
+            
+        Returns:
+            str: 套用模板後的完整 prompt
+        """
+        try:
+            # 載入 coding_instruction.txt 模板
+            template_path = Path(__file__).parent.parent / "assets" / "prompt-template" / "coding_instruction.txt"
+            
+            if not template_path.exists():
+                self.logger.error(f"找不到 coding_instruction.txt 模板: {template_path}")
+                return ""
+            
+            with open(template_path, 'r', encoding='utf-8') as f:
+                template = f.read()
+            
+            # 替換變數
+            prompt = template.format(
+                target_file=filepath,
+                target_function_name=function_name
+            )
+            
+            self.logger.debug(f"套用 coding_instruction 模板: {filepath} | {function_name}")
+            
+            return prompt
+            
+        except Exception as e:
+            self.logger.error(f"套用 coding_instruction 模板時發生錯誤: {e}")
+            return ""
+    
     def wait_for_response(self, timeout: int = None, use_smart_wait: bool = None) -> bool:
         """
         等待 Copilot 回應完成
@@ -670,6 +747,8 @@ class CopilotHandler:
             prompt_text = kwargs.get('prompt_text', "使用預設提示詞")
             actual_sent_prompt = kwargs.get('actual_sent_prompt', None)  # 實際發送的完整內容
             retry_count = kwargs.get('retry_count', 0)  # 重試次數
+            is_using_template = kwargs.get('is_using_template', False)  # 是否使用了模板
+            has_response_chaining = kwargs.get('has_response_chaining', False)  # 是否有回應串接
             
             with open(output_file, 'w', encoding='utf-8') as f:
                 f.write("# Copilot 自動補全記錄\n")
@@ -708,12 +787,24 @@ class CopilotHandler:
                 f.write(prompt_text)
                 f.write("\n\n")
                 
-                # 如果有實際發送的內容（串接後），也記錄下來
+                # 如果有實際發送的內容，也記錄下來
                 if actual_sent_prompt and actual_sent_prompt != prompt_text:
-                    f.write("## 實際發送內容（包含串接）\n\n")
+                    # 根據是否有回應串接來決定標題
+                    if has_response_chaining:
+                        f.write("## 實際發送內容（包含前面回應串接）\n\n")
+                    else:
+                        f.write("## 實際發送內容\n\n")
+                    
                     f.write(actual_sent_prompt)
                     f.write("\n\n")
-                    f.write(f"**注意**: 本次發送包含了前面回應的串接內容，總長度: {len(actual_sent_prompt)} 字元\n\n")
+                    
+                    # 根據情況顯示不同的說明
+                    if has_response_chaining:
+                        f.write(f"**注意**: 本次發送包含了前面回應的串接內容（啟用了「在新一輪提示詞中包含上一輪 Copilot 回應」選項），總長度: {len(actual_sent_prompt)} 字元\n\n")
+                    elif is_using_template:
+                        f.write(f"**注意**: 已套用 Coding Instruction 模板並加入完成指示標記，總長度: {len(actual_sent_prompt)} 字元\n\n")
+                    else:
+                        f.write(f"**注意**: 已加入完成指示標記 (COMPLETION_INSTRUCTION)，總長度: {len(actual_sent_prompt)} 字元\n\n")
                 
                 # 添加回應內容
                 f.write("## Copilot 回應\n\n")
@@ -760,11 +851,17 @@ class CopilotHandler:
             # 檢查是否啟用回應串接功能
             interaction_settings = self._load_interaction_settings()
             include_previous_response = interaction_settings.get("include_previous_response", False)
+            use_coding_instruction = interaction_settings.get("use_coding_instruction", False)
             
             if include_previous_response:
                 self.logger.info("✅ 啟用累積串接功能：每次回應會串接到下一行提示詞前面")
             else:
                 self.logger.info("ℹ️ 未啟用串接功能：按原始提示詞逐行發送")
+            
+            if use_coding_instruction:
+                self.logger.info("✅ 啟用 Coding Instruction 模板：將解析 prompt 並套用 coding_instruction.txt 模板")
+            else:
+                self.logger.info("ℹ️ 未啟用 Coding Instruction 模板：直接發送原始 prompt")
             
             successful_lines = 0
             failed_lines = []
@@ -789,14 +886,38 @@ class CopilotHandler:
                         else:
                             self.logger.info(f"處理第 {line_num}/{total_lines} 行...")
                         
-                        # 準備當前要發送的提示詞
+                        # === 處理 Coding Instruction 模板（如果啟用）===
+                        processed_prompt = original_prompt_line
+                        filepath_for_logging = None
+                        function_for_logging = None
+                        
+                        if use_coding_instruction:
+                            # 解析 prompt 行並提取第一個函式
+                            filepath, first_function = self._parse_and_extract_first_function(original_prompt_line)
+                            
+                            if filepath and first_function:
+                                # 套用 coding_instruction 模板
+                                processed_prompt = self._apply_coding_instruction_template(filepath, first_function)
+                                
+                                if processed_prompt:
+                                    filepath_for_logging = filepath
+                                    function_for_logging = first_function
+                                    self.logger.info(f"📝 已套用 Coding Instruction 模板: {filepath} | {first_function}")
+                                else:
+                                    self.logger.warning(f"⚠️  套用模板失敗，將使用原始 prompt")
+                                    processed_prompt = original_prompt_line
+                            else:
+                                self.logger.warning(f"⚠️  第 {line_num} 行格式錯誤，將使用原始 prompt")
+                                processed_prompt = original_prompt_line
+                        
+                        # === 準備當前要發送的提示詞（考慮串接）===
                         if include_previous_response and accumulated_response and line_num > 1:
-                            current_prompt = f"{accumulated_response}\n{original_prompt_line}"
+                            current_prompt = f"{accumulated_response}\n{processed_prompt}"
                             self.logger.info(f"📎 串接模式：將前面的回應(長度: {len(accumulated_response)} 字元)串接到第 {line_num} 行")
                         else:
-                            current_prompt = original_prompt_line
+                            current_prompt = processed_prompt
                             if line_num == 1:
-                                self.logger.info(f"🚀 第一行：使用原始提示詞")
+                                self.logger.info(f"🚀 第一行：使用{'處理後的' if use_coding_instruction else '原始'}提示詞")
                         
                         # 發送提示詞
                         if not self._send_prompt_with_content(current_prompt, line_num, total_lines):
@@ -848,18 +969,37 @@ class CopilotHandler:
                         
                         # 儲存到檔案
                         actual_sent_prompt = self.last_sent_prompt or current_prompt
+                        
+                        # 判斷是否有回應串接（只有在啟用串接且不是第一行時才有）
+                        has_response_chaining = include_previous_response and accumulated_response and line_num > 1
+                        
+                        # 準備儲存參數
+                        save_kwargs = {
+                            "project_path": project_path,
+                            "response": response,
+                            "is_success": True,
+                            "round_number": round_number,
+                            "line_number": line_num,
+                            "total_lines": total_lines,
+                            "prompt_text": original_prompt_line,
+                            "actual_sent_prompt": actual_sent_prompt,
+                            "retry_count": retry_count,
+                            "is_using_template": False,  # 預設不使用模板
+                            "has_response_chaining": has_response_chaining  # 傳入是否有回應串接
+                        }
+                        
+                        # 如果使用了 Coding Instruction 模板，添加額外資訊到日誌記錄中
+                        if use_coding_instruction and filepath_for_logging and function_for_logging:
+                            # 在 prompt_text 中添加註解，說明使用了模板
+                            save_kwargs["prompt_text"] = (
+                                f"【使用 Coding Instruction 模板】\n"
+                                f"原始 Prompt: {original_prompt_line}\n"
+                                f"解析結果: {filepath_for_logging} | {function_for_logging}\n"
+                                f"處理後的 Prompt: {processed_prompt}"
+                            )
+                            save_kwargs["is_using_template"] = True  # 標記使用了模板
 
-                        if not self.save_response_to_file(
-                            project_path, 
-                            response, 
-                            is_success=True, 
-                            round_number=round_number,
-                            line_number=line_num,
-                            total_lines=total_lines,
-                            prompt_text=original_prompt_line,
-                            actual_sent_prompt=actual_sent_prompt,
-                            retry_count=retry_count
-                        ):
+                        if not self.save_response_to_file(**save_kwargs):
                             error_msg = f"第 {line_num} 行：無法儲存回應到檔案"
                             failed_lines.append(error_msg)
                             self.logger.error(error_msg)

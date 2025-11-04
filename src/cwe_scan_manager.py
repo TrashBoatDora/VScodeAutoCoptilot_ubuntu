@@ -19,6 +19,7 @@ from datetime import datetime
 
 from src.logger import get_logger
 from src.cwe_detector import CWEDetector, CWEVulnerability
+from src.function_name_tracker import FunctionNameTracker
 
 logger = get_logger("CWEScanManager")
 
@@ -46,16 +47,18 @@ class FunctionTarget:
 class CWEScanManager:
     """CWE 掃描結果管理器"""
     
-    def __init__(self, output_dir: Path = None):
+    def __init__(self, output_dir: Path = None, function_name_tracker: FunctionNameTracker = None):
         """
         初始化掃描管理器
         
         Args:
             output_dir: 輸出目錄，預設為 ./CWE_Result
+            function_name_tracker: 函式名稱追蹤器（用於記錄修改前/後的函式名稱）
         """
         self.output_dir = output_dir or Path("./CWE_Result")
         self.output_dir.mkdir(parents=True, exist_ok=True)
         self.detector = CWEDetector()
+        self.function_name_tracker = function_name_tracker
         self.logger = get_logger("CWEScanManager")
         self.logger.info(f"CWE 掃描管理器初始化完成，輸出目錄: {self.output_dir}")
     
@@ -179,7 +182,7 @@ class CWEScanManager:
         儲存函式級別的掃描結果到 CSV
         
         每個函式一列，即使沒有漏洞也記錄
-        格式: 輪數,行號,檔案名稱_函式名稱,函式起始行,函式結束行,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
+        格式: 輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
         
         Args:
             file_path: CSV 檔案路徑
@@ -204,9 +207,9 @@ class CWEScanManager:
                 writer.writerow([
                     '輪數',
                     '行號',
-                    '檔案名稱_函式名稱',
-                    '函式起始行',
-                    '函式結束行',
+                    '檔案路徑',
+                    '修改前函式名稱',
+                    '修改後函式名稱',
                     '漏洞數量',
                     '漏洞行號',
                     '掃描器',
@@ -220,7 +223,27 @@ class CWEScanManager:
             # 為每個目標函式寫一列
             for target in function_targets:
                 for func_name in target.function_names:
-                    func_key = f"{target.file_path}_{func_name}()"
+                    # 查詢修改前和修改後的函式名稱
+                    before_name = func_name  # 預設使用原始名稱
+                    after_name = func_name   # 預設使用原始名稱
+                    
+                    if self.function_name_tracker:
+                        try:
+                            # 獲取「修改前」名稱（= FunctionName_query 的「當前函式名稱」）
+                            before_name, _ = self.function_name_tracker.get_function_name_for_round(
+                                target.file_path, func_name, round_number
+                            )
+                            
+                            # 獲取「修改後」名稱（= FunctionName_query 的「修改後函式名稱」）
+                            # 從當前輪次的記錄中取得修改後的名稱
+                            key = (target.file_path, func_name)
+                            if key in self.function_name_tracker.function_mapping:
+                                for round_num, modified_name, _ in self.function_name_tracker.function_mapping[key]:
+                                    if round_num == round_number:
+                                        after_name = modified_name
+                                        break
+                        except Exception as e:
+                            self.logger.warning(f"⚠️  查詢函式名稱失敗: {e}，使用原始名稱")
                     
                     # 使用正確的 key 查找掃描結果（與 scan_from_prompt_function_level 中的 key 格式一致）
                     result_key = f"{target.file_path}::{func_name}"
@@ -228,8 +251,6 @@ class CWEScanManager:
                     
                     # 查找該函式的漏洞（可能有多個，來自不同掃描器）
                     func_vulns = []
-                    func_start = ''
-                    func_end = ''
                     scan_status = 'unknown'  # 預設為未知狀態（表示沒有掃描結果）
                     failure_reason = ''
                     has_scan_record = False  # 標記是否找到任何掃描記錄（包括成功但無漏洞的）
@@ -254,9 +275,6 @@ class CWEScanManager:
                                     if vuln.function_name == func_name and (vuln.vulnerability_count is None or vuln.vulnerability_count > 0):
                                         # 找到該函式的漏洞記錄
                                         func_vulns.append(vuln)
-                                        if not func_start:
-                                            func_start = vuln.function_start or ''
-                                            func_end = vuln.function_end or ''
                     
                     # 判斷最終狀態
                     if scan_status == 'failed':
@@ -275,9 +293,9 @@ class CWEScanManager:
                         writer.writerow([
                             round_number,
                             line_number,
-                            func_key,
-                            '',  # 函式起始行
-                            '',  # 函式結束行
+                            target.file_path,
+                            before_name,
+                            after_name,
                             '',  # 漏洞數量
                             '',  # 漏洞行號
                             scanner_filter or '',
@@ -299,9 +317,9 @@ class CWEScanManager:
                             writer.writerow([
                                 round_number,
                                 line_number,
-                                func_key,
-                                func_start,
-                                func_end,
+                                target.file_path,
+                                before_name,
+                                after_name,
                                 vuln.vulnerability_count if vuln.vulnerability_count is not None else 1,
                                 vuln_lines,
                                 vuln.scanner.value if vuln.scanner else '',
@@ -316,9 +334,9 @@ class CWEScanManager:
                         writer.writerow([
                             round_number,
                             line_number,
-                            func_key,
-                            func_start,
-                            func_end,
+                            target.file_path,
+                            before_name,
+                            after_name,
                             0,
                             '',
                             scanner_filter or '',

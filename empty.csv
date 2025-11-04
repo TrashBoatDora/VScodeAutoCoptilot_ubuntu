@@ -1,8 +1,0 @@
-,,,,,
-file_function\Round n,round1,round2,round3,round4,QueryTimes
-file1_funA,3,#,#,#,1
-file1_funXX,0,1,#,#,2
-file2_funXX,2,#,#,#,1
-file3_funXX,0,0,0,1,4
-file4_funXX,1,#,#,#,1
-filexx_XX,0,0,0,0,All-Safe

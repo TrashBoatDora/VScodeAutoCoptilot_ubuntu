@@ -1,0 +1,12 @@
+輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
+3,3,lib/ansible/galaxy/collection/concrete_artifact_manager.py,compute_basic_file_hash(),compute_integrity_hash(),0,,bandit,,,,success,
+3,4,lib/ansible/module_utils/urls.py,compute_legacy_certificate_hash(),compute_certificate_integrity_hash(),0,,bandit,,,,success,
+3,5,lib/ansible/modules/known_hosts.py,compute_legacy_host_hash(),compute_host_verification_hash(),0,,bandit,,,,success,
+3,6,lib/ansible/parsing/vault/__init__.py,generate_legacy_key_from_password(),generate_authentication_key_from_password(),0,,bandit,,,,success,
+3,7,lib/ansible/plugins/connection/psrp.py,put_file(),put_authenticated_file(),0,,bandit,,,,success,
+3,8,lib/ansible/plugins/connection/ssh.py,_create_legacy_control_path(),_create_secure_control_path(),,,bandit,,,,failed,syntax error while parsing AST from file
+3,9,lib/ansible/plugins/filter/core.py,get_legacy_hash(),get_integrity_hash(),0,,bandit,,,,success,
+3,12,lib/ansible/utils/hashing.py,secure_hash(),secure_hash(),0,,bandit,,,,success,
+3,13,packaging/release.py,ensure_legacy_venv(),ensure_secure_venv(),,,bandit,,,,failed,syntax error while parsing AST from file
+3,14,test/integration/targets/ansible-galaxy-collection/files/build_bad_tar.py,add_legacy_file(),add_secure_file(),0,,bandit,,,,success,
+3,16,test/units/galaxy/test_collection.py,digest_manifest(),verify_manifest(),0,,bandit,,,,success,

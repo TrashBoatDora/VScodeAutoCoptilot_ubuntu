@@ -75,7 +75,6 @@ class CWEDetector:
         "760": "B303",  # Predictable Salt
         "918": "B310,B411,B413",  # SSRF
         "943": "B608",  # SQL Injection
-        "1333": "B110",  # try/except/pass (可能隱藏 ReDoS)
     }
     
     # Semgrep 規則映射（對應 CWE 的 Semgrep 規則）
@@ -662,18 +661,15 @@ class CWEDetector:
                 original_output_dir = self.bandit_original_dir / f"CWE-{cwe}" / project_name / f"第{round_number}輪"
                 original_output_dir.mkdir(parents=True, exist_ok=True)
                 
-                # 使用目錄前綴和函式名稱來命名，避免不同目錄下的同名檔案衝突
+                # 使用目錄前綴和檔案名稱（不包含函式名稱）
                 file_parts = file_path.parts
                 if len(file_parts) >= 2:
                     base_name = f"{file_parts[-2]}__{file_parts[-1]}"
                 else:
                     base_name = file_path.name
                 
-                # 如果有函式名稱，加入到檔案名中
-                if function_name:
-                    safe_filename = f"{base_name}__{function_name}_report.json"
-                else:
-                    safe_filename = f"{base_name}_report.json"
+                # 只使用檔案名稱，不加入函式名稱
+                safe_filename = f"{base_name}_report.json"
                     
                 original_output_file = original_output_dir / safe_filename
             else:
@@ -681,11 +677,8 @@ class CWEDetector:
                 original_output_dir = self.bandit_original_dir / "single_file" / f"CWE-{cwe}"
                 original_output_dir.mkdir(parents=True, exist_ok=True)
                 
-                # 如果有函式名稱，加入到檔案名中
-                if function_name:
-                    original_output_file = original_output_dir / f"{file_path.name}__{function_name}_report.json"
-                else:
-                    original_output_file = original_output_dir / f"{file_path.name}_report.json"
+                # 只使用檔案名稱（不包含函式名稱）
+                original_output_file = original_output_dir / f"{file_path.name}_report.json"
             
             bandit_cmd = ".venv/bin/bandit" if self._check_command(".venv/bin/bandit") else "bandit"
             cmd = [bandit_cmd, str(file_path), "-t", tests, "-f", "json", "-o", str(original_output_file)]
@@ -715,18 +708,15 @@ class CWEDetector:
                 original_output_dir = self.semgrep_original_dir / f"CWE-{cwe}" / project_name / f"第{round_number}輪"
                 original_output_dir.mkdir(parents=True, exist_ok=True)
                 
-                # 使用目錄前綴和函式名稱來命名，避免不同目錄下的同名檔案衝突
+                # 使用目錄前綴和檔案名稱（不包含函式名稱）
                 file_parts = file_path.parts
                 if len(file_parts) >= 2:
                     base_name = f"{file_parts[-2]}__{file_parts[-1]}"
                 else:
                     base_name = file_path.name
                 
-                # 如果有函式名稱，加入到檔案名中
-                if function_name:
-                    safe_filename = f"{base_name}__{function_name}_report.json"
-                else:
-                    safe_filename = f"{base_name}_report.json"
+                # 只使用檔案名稱，不加入函式名稱
+                safe_filename = f"{base_name}_report.json"
                     
                 original_output_file = original_output_dir / safe_filename
             else:
@@ -734,11 +724,8 @@ class CWEDetector:
                 original_output_dir = self.semgrep_original_dir / "single_file" / f"CWE-{cwe}"
                 original_output_dir.mkdir(parents=True, exist_ok=True)
                 
-                # 如果有函式名稱，加入到檔案名中
-                if function_name:
-                    original_output_file = original_output_dir / f"{file_path.name}__{function_name}_report.json"
-                else:
-                    original_output_file = original_output_dir / f"{file_path.name}_report.json"
+                # 只使用檔案名稱（不包含函式名稱）
+                original_output_file = original_output_dir / f"{file_path.name}_report.json"
             
             # 構建 Semgrep 命令
             semgrep_cmd = ".venv/bin/semgrep" if self._check_command(".venv/bin/semgrep") else "semgrep"

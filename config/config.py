@@ -46,8 +46,11 @@ class Config:
     # ==================== Copilot Chat 相關設定 ====================
     COPILOT_RESPONSE_TIMEOUT = 3600   # Copilot 回應超時時間（秒）
     COPILOT_CHECK_INTERVAL = 3      # 檢查回應完成間隔（秒）
-    COPILOT_COPY_RETRY_MAX = 3      # 複製回應重試次數
+    COPILOT_COPY_RETRY_MAX = 3      # 複製回應重試次數（copilot_handler 內部）
     COPILOT_COPY_RETRY_DELAY = 2    # 複製重試間隔（秒）
+    
+    # Artificial Suicide 模式專用重試設定
+    AS_MODE_MAX_RETRY_PER_LINE = 10  # AS 模式中每一行的最大重試次數（包含所有失敗類型）
     
     # 模型切換設定
     COPILOT_SWITCH_MODEL_ON_START = True  # 是否在開始時切換模型

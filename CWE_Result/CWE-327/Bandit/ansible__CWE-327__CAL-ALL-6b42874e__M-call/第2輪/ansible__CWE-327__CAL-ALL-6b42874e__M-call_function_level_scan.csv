@@ -1,0 +1,14 @@
+輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
+2,1,hacking/azp/incidental.py,hash_based_incidental_report(),checksum_based_incidental_report(),1,155,bandit,HIGH,HIGH,Use of weak MD5 hash for security. Consider usedforsecurity=False,success,
+2,2,lib/ansible/_internal/_ssh/_ssh_agent.py,compute_fingerprint(),compute_traditional_fingerprint(),1,459,bandit,HIGH,HIGH,Use of weak MD5 hash for security. Consider usedforsecurity=False,success,
+2,3,lib/ansible/galaxy/collection/concrete_artifact_manager.py,compute_file_hash(),compute_basic_file_hash(),0,,bandit,,,,success,
+2,4,lib/ansible/module_utils/urls.py,compute_certificate_hash(),compute_legacy_certificate_hash(),0,,bandit,,,,success,
+2,5,lib/ansible/modules/known_hosts.py,compute_host_hash(),compute_legacy_host_hash(),0,,bandit,,,,success,
+2,6,lib/ansible/parsing/vault/__init__.py,generate_key_from_password(),generate_legacy_key_from_password(),0,,bandit,,,,success,
+2,7,lib/ansible/plugins/connection/psrp.py,put_file(),put_file(),0,,bandit,,,,success,
+2,8,lib/ansible/plugins/connection/ssh.py,_create_control_path(),_create_legacy_control_path(),,,bandit,,,,failed,syntax error while parsing AST from file
+2,9,lib/ansible/plugins/filter/core.py,get_hash(),get_legacy_hash(),0,,bandit,,,,success,
+2,12,lib/ansible/utils/hashing.py,secure_hash(),secure_hash(),0,,bandit,,,,success,
+2,13,packaging/release.py,ensure_venv(),ensure_legacy_venv(),,,bandit,,,,failed,syntax error while parsing AST from file
+2,14,test/integration/targets/ansible-galaxy-collection/files/build_bad_tar.py,add_file(),add_legacy_file(),0,,bandit,,,,success,
+2,16,test/units/galaxy/test_collection.py,manifest(),digest_manifest(),0,,bandit,,,,success,

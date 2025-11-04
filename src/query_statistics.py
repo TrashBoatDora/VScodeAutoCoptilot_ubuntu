@@ -78,7 +78,7 @@ class QueryStatistics:
             self.csv_path.parent.mkdir(parents=True, exist_ok=True)
             
             # 準備表頭
-            headers = ['file_function\\Round n'] + \
+            headers = ['檔案路徑', '函式名稱'] + \
                      [f'round{i}' for i in range(1, self.total_rounds + 1)] + \
                      ['QueryTimes']
             
@@ -90,11 +90,11 @@ class QueryStatistics:
                 
                 # 寫入每個函式的初始行（所有欄位為空）
                 for function_key in self.function_list:
-                    # 簡化函式名稱
-                    display_name = self._simplify_function_name(function_key)
+                    # 分離檔案路徑和函數名稱
+                    filepath, function_name = self._split_function_key(function_key)
                     
-                    # 初始行：函式名 + 空欄位
-                    row = [display_name] + [''] * (self.total_rounds + 1)
+                    # 初始行：檔案路徑 + 函數名稱 + 空欄位
+                    row = [filepath, function_name] + [''] * (self.total_rounds + 1)
                     writer.writerow(row)
             
             self.logger.info(f"✅ 初始化 CSV: {self.csv_path} ({len(self.function_list)} 個函式)")
@@ -153,7 +153,7 @@ class QueryStatistics:
         判斷某個函式是否應該跳過（已攻擊成功）
         
         Args:
-            function_key: 函式識別（如 "file.py_func()"）
+            function_key: 函式識別（格式："filepath_function()"）
             
         Returns:
             bool: True = 應跳過，False = 需要繼續攻擊
@@ -164,14 +164,15 @@ class QueryStatistics:
             if current_data is None:
                 return False
             
-            # 簡化函式名稱
-            display_name = self._simplify_function_name(function_key)
+            # 將 function_key 轉換為 CSV 中使用的格式 "filepath::function_name"
+            filepath, function_name = self._split_function_key(function_key)
+            csv_key = f"{filepath}::{function_name}"
             
             # 查找該函式
-            if display_name not in current_data:
+            if csv_key not in current_data:
                 return False
             
-            function_data = current_data[display_name]
+            function_data = current_data[csv_key]
             
             # 檢查是否有任何輪次發現漏洞（值 > 0）
             for round_num in range(1, self.total_rounds + 1):
@@ -194,9 +195,38 @@ class QueryStatistics:
             self.logger.error(f"❌ 判斷是否跳過時發生錯誤: {e}")
             return False
     
-    def _simplify_function_name(self, function_key: str) -> str:
-        """簡化函式名稱（移除 .py 和括號）"""
-        return function_key.replace('.py_', '_').replace('()', '').replace('/', '/')
+    def _split_function_key(self, function_key: str) -> tuple:
+        """
+        分離檔案路徑和函數名稱
+        
+        Args:
+            function_key: 格式 "filepath_function()" 其中 filepath 以 .py 結尾
+            
+        Returns:
+            (filepath, function_name)
+        """
+        # 移除括號
+        key_without_parens = function_key.replace('()', '')
+        
+        # 尋找 .py_ 的位置來分離檔案路徑和函數名稱
+        # 因為檔案路徑一定以 .py 結尾，之後會有 _ 接著函數名稱
+        split_marker = '.py_'
+        if split_marker in key_without_parens:
+            parts = key_without_parens.split(split_marker, 1)  # 只分割第一個匹配
+            if len(parts) == 2:
+                filepath = parts[0] + '.py'  # 加回 .py
+                function_name = parts[1]
+                return (filepath, function_name)
+        
+        # 如果找不到 .py_，嘗試找最後一個底線（向後兼容）
+        last_underscore = key_without_parens.rfind('_')
+        if last_underscore != -1:
+            filepath = key_without_parens[:last_underscore]
+            function_name = key_without_parens[last_underscore + 1:]
+            return (filepath, function_name)
+        else:
+            # 無法分離，返回原值和空字串
+            return (function_key, '')
     
     def _read_round_scan(self, round_num: int) -> Optional[Dict[str, Tuple[int, str]]]:
         """
@@ -229,9 +259,17 @@ class QueryStatistics:
                 with open(bandit_csv, 'r', encoding='utf-8') as f:
                     reader = csv.DictReader(f)
                     for record in reader:
-                        file_function = record.get('檔案名稱_函式名稱', '').strip()
-                        if not file_function:
+                        # 新格式：檔案路徑和修改前/修改後函式名稱是分開的
+                        filepath = record.get('檔案路徑', '').strip()
+                        # 注意：欄位名稱是「修改後函式名稱」（Phase 2 掃描時的實際名稱）
+                        function_name = record.get('修改後函式名稱', '').strip()
+                        
+                        if not filepath or not function_name:
                             continue
+                        
+                        # 只用檔案路徑作為 key（忽略函式名稱以支援 Phase 1 修改）
+                        # 假設同一檔案在同一輪只會掃描一個函式
+                        file_function = filepath
                         
                         scan_status = record.get('掃描狀態', '').strip()
                         bandit_status[file_function] = scan_status
@@ -243,7 +281,8 @@ class QueryStatistics:
                             except ValueError:
                                 vuln_count = 0
                             
-                            bandit_data[file_function] = vuln_count
+                            # 如果同一檔案有多個函式，累加漏洞數量
+                            bandit_data[file_function] = bandit_data.get(file_function, 0) + vuln_count
                         # failed 或其他狀態不加入 data（稍後處理）
             except Exception as e:
                 self.logger.error(f"❌ 讀取 Bandit 第 {round_num} 輪掃描結果時發生錯誤: {e}")
@@ -256,9 +295,17 @@ class QueryStatistics:
                 with open(semgrep_csv, 'r', encoding='utf-8') as f:
                     reader = csv.DictReader(f)
                     for record in reader:
-                        file_function = record.get('檔案名稱_函式名稱', '').strip()
-                        if not file_function:
+                        # 新格式：檔案路徑和修改前/修改後函式名稱是分開的
+                        filepath = record.get('檔案路徑', '').strip()
+                        # 注意：欄位名稱是「修改後函式名稱」（Phase 2 掃描時的實際名稱）
+                        function_name = record.get('修改後函式名稱', '').strip()
+                        
+                        if not filepath or not function_name:
                             continue
+                        
+                        # 只用檔案路徑作為 key（忽略函式名稱以支援 Phase 1 修改）
+                        # 假設同一檔案在同一輪只會掃描一個函式
+                        file_function = filepath
                         
                         scan_status = record.get('掃描狀態', '').strip()
                         semgrep_status[file_function] = scan_status
@@ -270,7 +317,8 @@ class QueryStatistics:
                             except ValueError:
                                 vuln_count = 0
                             
-                            semgrep_data[file_function] = vuln_count
+                            # 如果同一檔案有多個函式，累加漏洞數量
+                            semgrep_data[file_function] = semgrep_data.get(file_function, 0) + vuln_count
                         # failed 或其他狀態不加入 data（稍後處理）
             except Exception as e:
                 self.logger.error(f"❌ 讀取 Semgrep 第 {round_num} 輪掃描結果時發生錯誤: {e}")
@@ -306,7 +354,8 @@ class QueryStatistics:
         讀取現有的 CSV 檔案
         
         Returns:
-            Dict[function_name, {round1: value, round2: value, ..., QueryTimes: value}]
+            Dict[function_key, {round1: value, round2: value, ..., QueryTimes: value}]
+            其中 function_key 格式為 "filepath::function_name"
         """
         if not self.csv_path.exists():
             return {}
@@ -316,9 +365,14 @@ class QueryStatistics:
             with open(self.csv_path, 'r', encoding='utf-8') as f:
                 reader = csv.DictReader(f)
                 for row in reader:
-                    function_name = row.get('file_function\\Round n', '').strip()
-                    if not function_name:
+                    filepath = row.get('檔案路徑', '').strip()
+                    function_name = row.get('函式名稱', '').strip()
+                    
+                    if not filepath or not function_name:
                         continue
+                    
+                    # 組合成唯一的 key
+                    function_key = f"{filepath}::{function_name}"
                     
                     # 讀取所有輪次的值
                     function_data = {}
@@ -328,7 +382,7 @@ class QueryStatistics:
                     
                     function_data['QueryTimes'] = row.get('QueryTimes', '').strip()
                     
-                    result[function_name] = function_data
+                    result[function_key] = function_data
             
             return result
             
@@ -417,19 +471,41 @@ class QueryStatistics:
         
         return updated_data
     
-    def _find_original_key(self, simplified_name: str, round_data: Dict) -> Optional[str]:
-        """從簡化名稱找到原始的函式鍵"""
-        # 嘗試各種可能的格式
-        for key in round_data.keys():
-            if self._simplify_function_name(key) == simplified_name:
-                return key
+    def _find_original_key(self, function_key: str, round_data: Dict) -> Optional[str]:
+        """
+        從 function_key 找到原始的函式鍵（只匹配檔案路徑）
+        
+        Args:
+            function_key: 格式為 "filepath::function_name"
+            round_data: 掃描結果，key 現在只是檔案路徑
+            
+        Returns:
+            原始的鍵值或 None
+            
+        Note:
+            只根據檔案路徑匹配，不管函式名稱是否被修改
+            這避免了 Phase 1 修改函式名稱後無法匹配的問題
+        """
+        # 從 function_key 提取檔案路徑
+        parts = function_key.split('::')
+        if len(parts) != 2:
+            return None
+        
+        filepath, function_name = parts
+        
+        # round_data 的 key 現在就是檔案路徑，直接檢查是否存在
+        if filepath in round_data:
+            self.logger.debug(f"✅ 匹配成功: {function_key} -> {filepath}")
+            return filepath
+        
+        self.logger.debug(f"⚠️  找不到匹配: {function_key} (filepath: {filepath})")
         return None
     
     def _write_updated_csv(self, data: Dict) -> bool:
         """寫入更新後的 CSV"""
         try:
             # 準備表頭
-            headers = ['file_function\\Round n'] + \
+            headers = ['檔案路徑', '函式名稱'] + \
                      [f'round{i}' for i in range(1, self.total_rounds + 1)] + \
                      ['QueryTimes']
             
@@ -440,10 +516,18 @@ class QueryStatistics:
                 writer.writerow(headers)
                 
                 # 寫入每個函式的資料
-                for function_name in sorted(data.keys()):
-                    function_data = data[function_name]
+                for function_key in sorted(data.keys()):
+                    function_data = data[function_key]
                     
-                    row = [function_name]
+                    # 分離檔案路徑和函數名稱
+                    parts = function_key.split('::')
+                    if len(parts) == 2:
+                        filepath, function_name = parts
+                    else:
+                        # 如果格式不對，嘗試使用舊方法
+                        filepath, function_name = self._split_function_key(function_key)
+                    
+                    row = [filepath, function_name]
                     
                     # 添加每一輪的資料
                     for round_num in range(1, self.total_rounds + 1):
@@ -627,7 +711,7 @@ class QueryStatistics:
             output_path.parent.mkdir(parents=True, exist_ok=True)
             
             # 準備表頭
-            headers = ['file_function\\Round n'] + \
+            headers = ['檔案路徑', '函式名稱'] + \
                      [f'round{i}' for i in range(1, total_rounds + 1)] + \
                      ['QueryTimes']
             
@@ -641,10 +725,10 @@ class QueryStatistics:
                 for function_key in sorted(function_stats.keys()):
                     stats = function_stats[function_key]
                     
-                    # 簡化函式名稱（移除 .py 和括號）
-                    display_name = self._simplify_function_name(function_key)
+                    # 分離檔案路徑和函數名稱
+                    filepath, function_name = self._split_function_key(function_key)
                     
-                    row = [display_name]
+                    row = [filepath, function_name]
                     
                     # 添加每一輪的資料
                     for round_num in range(1, total_rounds + 1):

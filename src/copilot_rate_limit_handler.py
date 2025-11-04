@@ -13,65 +13,26 @@ from src.logger import get_logger
 
 COMPLETION_MARKER = "已完成回答"
 COMPLETION_MARKER_en = "Response completed"
-_COMPLETION_TRAILING_CHARS = ' \t\r\n"""\'\'」』】》）〉>。、.!?;；:、…'
-
-# Copilot 自動追加的後綴內容列表（需要清理）
-_COPILOT_AUTO_SUFFIXES = [
-    "Made changes.",
-    "Made changes",
-]
-
-
-def _clean_copilot_response(response: str) -> str:
-    """
-    清理 Copilot 回應中的自動追加內容
-    
-    Args:
-        response: 原始回應內容
-        
-    Returns:
-        str: 清理後的回應內容
-    """
-    if not response:
-        return response
-    
-    cleaned = response.strip()
-    
-    # 反覆移除已知的 Copilot 自動後綴，直到無法再移除為止
-    # 處理多個重複的 "Made changes." 情況
-    changed = True
-    while changed:
-        changed = False
-        for suffix in _COPILOT_AUTO_SUFFIXES:
-            if cleaned.endswith(suffix):
-                cleaned = cleaned[:-len(suffix)].rstrip()
-                changed = True  # 繼續檢查是否還有更多後綴
-                break  # 重新開始檢查（因為 rstrip 後長度已改變）
-    
-    return cleaned
 
 
 def is_response_incomplete(response: str) -> bool:
     """
     檢查回應是否完成。
-
-    先清理 Copilot 自動追加的內容（如 "Made changes."），
-    然後檢查回應是否以「已完成回答」結尾（允許尾端存在空白或常見標點符號），
-    否則視為不完整，需要重試。
+    
+    簡化邏輯：只要回應中包含完成標記（「已完成回答」或「Response completed」），
+    就視為完成，不管後面還有什麼內容。
+    
+    Args:
+        response: 原始回應內容
+        
+    Returns:
+        bool: True = 不完整（需要重試），False = 完整（可以繼續）
     """
     if not response:
         return True
 
-    # 先清理 Copilot 自動追加的內容
-    cleaned = _clean_copilot_response(response)
-    if not cleaned:
-        return True
-
-    # 去除尾端空白和標點符號
-    normalized = cleaned.rstrip(_COMPLETION_TRAILING_CHARS)
-    
-    # 檢查是否以完成標記結尾
-    if normalized.endswith(COMPLETION_MARKER) or normalized.endswith(COMPLETION_MARKER_en):
+    # 只要回應中包含完成標記，就算完成
+    if COMPLETION_MARKER in response or COMPLETION_MARKER_en in response:
         return False
 
     return True
@@ -79,25 +40,48 @@ def is_response_incomplete(response: str) -> bool:
 
 def wait_and_retry(seconds: int, line_number: int, round_number: int, logger, retry_count: int = 0):
     """
-    等待指定時間並顯示倒數
+    等待指定時間並顯示倒數（改良版指數退避策略）
     
     Args:
-        seconds: 等待秒數
+        seconds: 基礎等待秒數（已廢棄，改用 retry_count 計算）
         line_number: 提示詞行號
         round_number: 互動輪數
         logger: 日誌記錄器
-        retry_count: 當前是第幾次重試
+        retry_count: 當前是第幾次重試（0開始）
+        
+    Note:
+        改良版指數退避策略：每個時間階段重複一次，最大上限 2160 秒
+        - retry_count=0,1: 10秒
+        - retry_count=2,3: 60秒
+        - retry_count=4,5: 360秒（6分鐘）
+        - retry_count=6,7,8,9: 2160秒（36分鐘，達到上限）
+        
+        計算公式：
+        1. 計算階段：stage = retry_count // 2
+        2. 計算基礎時間：base_time = 10 * (6 ^ stage)
+        3. 應用上限：min(base_time, 2160)
     """
-    logger.warning(f"⏳ 回應不完整，等待 {seconds} 秒後重試 [輪次: {round_number}, 行號: {line_number}, 重試: {retry_count}]")
+    # 改良版指數退避策略：每個階段重複一次，並設置上限
+    stage = retry_count // 2  # 每兩次重試進入下一個階段
+    base_time = 10 * (6 ** stage)
+    actual_wait_seconds = min(base_time, 2160)  # 最大等待時間為 2160 秒
+    
+    logger.warning(f"⏳ 回應不完整，等待 {actual_wait_seconds} 秒後重試 [輪次: {round_number}, 行號: {line_number}, 重試次數: {retry_count + 1}]")
+    logger.info(f"   📊 改良版指數退避策略: stage={stage}, 10 × 6^{stage} = {base_time} 秒 → 實際等待 {actual_wait_seconds} 秒")
     
     # 每60秒顯示一次進度
-    remaining = seconds
+    remaining = actual_wait_seconds
     while remaining > 0:
         chunk = min(60, remaining)
-        if remaining == seconds:
-            logger.info(f"   開始等待 {seconds} 秒...")
+        if remaining == actual_wait_seconds:
+            logger.info(f"   開始等待 {actual_wait_seconds} 秒...")
         else:
-            logger.info(f"   剩餘 {remaining} 秒...")
+            minutes = remaining // 60
+            secs = remaining % 60
+            if minutes > 0:
+                logger.info(f"   剩餘 {minutes} 分 {secs} 秒...")
+            else:
+                logger.info(f"   剩餘 {remaining} 秒...")
         time.sleep(chunk)
         remaining -= chunk
     

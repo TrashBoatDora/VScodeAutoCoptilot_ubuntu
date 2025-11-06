@@ -821,7 +821,7 @@ class CopilotHandler:
             return False
     
     def process_project_with_line_by_line(self, project_path: str, round_number: int = 1, 
-                                        use_smart_wait: bool = None) -> Tuple[bool, int, List[str]]:
+                                        use_smart_wait: bool = None, max_lines: int = None) -> Tuple[bool, int, List[str]]:
         """
         使用專案專用提示詞模式處理專案（按行發送）
         支援累積串接功能：每次將當前回應串接到下一行提示詞前面
@@ -830,6 +830,7 @@ class CopilotHandler:
             project_path: 專案路徑
             round_number: 當前互動輪數
             use_smart_wait: 是否使用智能等待
+            max_lines: 最大處理行數限制（None 表示無限制）
             
         Returns:
             Tuple[bool, int, List[str]]: (是否成功, 成功處理的行數, 失敗的行列表)
@@ -844,6 +845,12 @@ class CopilotHandler:
                 error_msg = f"專案 {project_name} 沒有可用的提示詞行"
                 self.logger.error(error_msg)
                 return False, 0, [error_msg]
+            
+            # 應用行數限制
+            original_line_count = len(prompt_lines)
+            if max_lines is not None and max_lines > 0:
+                prompt_lines = prompt_lines[:max_lines]
+                self.logger.info(f"📊 檔案限制已啟用: 原有 {original_line_count} 行，限制處理前 {max_lines} 行")
             
             total_lines = len(prompt_lines)
             self.logger.info(f"開始按行處理專案 {project_name}，共 {total_lines} 行提示詞")
@@ -1057,7 +1064,7 @@ class CopilotHandler:
             return False, 0, [error_msg]
     
     def _process_project_with_project_prompts(self, project_path: str, max_rounds: int = None, 
-                                            interaction_settings: dict = None) -> bool:
+                                            interaction_settings: dict = None, max_lines: int = None) -> Tuple[bool, int]:
         """
         使用專案專用提示詞模式處理專案的多輪互動
         
@@ -1065,9 +1072,10 @@ class CopilotHandler:
             project_path: 專案路徑
             max_rounds: 最大互動輪數
             interaction_settings: 互動設定
+            max_lines: 最大處理行數限制（None 表示無限制）
             
         Returns:
-            bool: 處理是否成功
+            Tuple[bool, int]: (處理是否成功, 實際處理的行數)
         """
         try:
             # 導入config以確保作用域可訪問
@@ -1082,9 +1090,9 @@ class CopilotHandler:
             if not interaction_settings.get("interaction_enabled", True):
                 self.logger.info("多輪互動功能已停用，執行單輪專案專用處理")
                 success, successful_lines, failed_lines = self.process_project_with_line_by_line(
-                    project_path, round_number=1
+                    project_path, round_number=1, max_lines=max_lines
                 )
-                return success
+                return success, successful_lines
             
             # 使用設定中的參數
             if max_rounds is None:
@@ -1098,14 +1106,19 @@ class CopilotHandler:
             prompt_lines = self.load_project_prompt_lines(project_path)
             if not prompt_lines:
                 self.logger.error(f"專案 {project_name} 沒有可用的提示詞檔案")
-                return False
+                return False, 0
+            
+            # 應用行數限制（在多輪情況下，限制只影響每輪處理的行數）
+            original_line_count = len(prompt_lines)
+            if max_lines is not None and max_lines > 0:
+                self.logger.info(f"📊 檔案限制已啟用: 原有 {original_line_count} 行，每輪限制處理前 {max_lines} 行")
             
             total_lines = len(prompt_lines)
-            self.logger.info(f"專案 {project_name} 有 {total_lines} 行提示詞，每輪將發送 {total_lines} 次")
+            self.logger.info(f"專案 {project_name} 有 {total_lines} 行提示詞，每輪將發送 {min(total_lines, max_lines) if max_lines else total_lines} 次")
             
             # 追蹤每一輪的成功狀態
             overall_success = True
-            total_successful_lines = 0
+            first_round_successful_lines = 0  # 只記錄第一輪的處理行數
             total_failed_lines = []
             
             # 進行多輪互動
@@ -1125,14 +1138,17 @@ class CopilotHandler:
                     vscode_controller.clear_copilot_memory(modification_action)
                     time.sleep(2)  # 等待記憶清除完成
                 
-                # 處理本輪的按行互動
+                # 處理本輪的按行互動（傳遞 max_lines 限制）
                 success, successful_lines, failed_lines = self.process_project_with_line_by_line(
-                    project_path, round_number=round_num
+                    project_path, round_number=round_num, max_lines=max_lines
                 )
                 
+                # 只在第一輪記錄實際處理的行數
+                if round_num == 1:
+                    first_round_successful_lines = successful_lines
+                
                 if success:
-                    total_successful_lines += successful_lines
-                    self.logger.info(f"✅ 第 {round_num} 輪互動成功：{successful_lines}/{total_lines} 行")
+                    self.logger.info(f"✅ 第 {round_num} 輪互動成功：{successful_lines}/{min(total_lines, max_lines) if max_lines else total_lines} 行")
                 else:
                     overall_success = False
                     self.logger.error(f"❌ 第 {round_num} 輪互動失敗")
@@ -1145,11 +1161,14 @@ class CopilotHandler:
                     time.sleep(round_delay)
             
             # 處理結束統計
-            expected_total = total_lines * max_rounds
+            expected_per_round = min(total_lines, max_lines) if max_lines else total_lines
+            expected_total = expected_per_round * max_rounds
+            total_successful_lines = first_round_successful_lines * max_rounds  # 估算總成功行數
             success_rate = (total_successful_lines / expected_total * 100) if expected_total > 0 else 0
             
             self.logger.create_separator(f"專案 {project_name} 專案專用模式處理完成")
-            self.logger.info(f"總計成功處理: {total_successful_lines}/{expected_total} 行 ({success_rate:.1f}%)")
+            self.logger.info(f"每輪處理: {first_round_successful_lines} 行")
+            self.logger.info(f"總計 {max_rounds} 輪，估算處理: {total_successful_lines}/{expected_total} 行 ({success_rate:.1f}%)")
             
             if total_failed_lines:
                 self.logger.warning(f"總計失敗行數: {len(total_failed_lines)}")
@@ -1159,49 +1178,66 @@ class CopilotHandler:
             self.logger.info(f"所有互動輪次完成，進入穩定期 {cooldown_time} 秒...")
             time.sleep(cooldown_time)
             
-            return overall_success and (total_successful_lines > 0)
+            # 返回成功狀態和第一輪實際處理的行數（不乘以輪數，避免重複計算）
+            return overall_success and (first_round_successful_lines > 0), first_round_successful_lines
             
         except Exception as e:
             self.logger.error(f"專案專用模式處理失敗: {str(e)}")
             return False
     
     def process_project_complete(self, project_path: str, use_smart_wait: bool = None, 
-                               round_number: int = 1, custom_prompt: str = None) -> Tuple[bool, Optional[str]]:
+                               round_number: int = 1, custom_prompt: str = None, max_lines: int = None) -> Tuple[bool, int]:
         """
         完整處理一個專案（發送提示 -> 等待回應 -> 複製並儲存）
+        支援專案專用提示詞模式（按行處理）和全域提示詞模式（單次處理）
         
         Args:
             project_path: 專案路徑
             use_smart_wait: 是否使用智能等待，若為 None 則使用配置值
             round_number: 當前互動輪數
             custom_prompt: 自定義提示詞，若為 None 則使用預設提示詞
+            max_lines: 最大處理行數限制（僅用於專案專用模式，None 表示無限制）
             
         Returns:
-            Tuple[bool, Optional[str]]: (是否成功, 錯誤訊息)
+            Tuple[bool, int]: (是否成功, 實際處理的行數/函數數)
         """
         try:
             project_name = Path(project_path).name
+            
+            # 檢查提示詞來源模式
+            interaction_settings = self._load_interaction_settings()
+            prompt_source_mode = interaction_settings.get("prompt_source_mode", "global")
+            
+            # 如果是專案專用提示詞模式，使用按行處理
+            if prompt_source_mode == "project" and custom_prompt is None:
+                self.logger.info(f"使用專案專用提示詞模式處理: {project_name}")
+                success, processed_lines, failed_lines = self.process_project_with_line_by_line(
+                    project_path, round_number, use_smart_wait, max_lines=max_lines
+                )
+                return success, processed_lines
+            
+            # 全域提示詞模式：單次處理
             self.logger.create_separator(f"處理專案: {project_name} (第 {round_number} 輪)")
             
             # 步驟1: 開啟 Copilot Chat
             if not self.open_copilot_chat():
-                return False, "無法開啟 Copilot Chat"
+                return False, 0
             
             # 步驟2: 發送提示詞
             if not self.send_prompt(prompt=custom_prompt, round_number=round_number):
-                return False, "無法發送提示詞"
+                return False, 0
                 
             # 保存實際使用的提示詞，用於記錄
             actual_prompt = custom_prompt or self._load_prompt_from_file(round_number)
             
             # 步驟3: 等待回應 (使用指定的等待模式)
             if not self.wait_for_response(use_smart_wait=use_smart_wait):
-                return False, "等待回應超時"
+                return False, 0
             
             # 步驟4: 複製回應
             response = self.copy_response()
             if not response:
-                return False, "無法複製回應內容"
+                return False, 0
             
             # 步驟5: 儲存到檔案
             if not self.save_response_to_file(
@@ -1211,13 +1247,14 @@ class CopilotHandler:
                 round_number=round_number,
                 prompt_text=actual_prompt
             ):
-                return False, "無法儲存回應到檔案"
+                return False, 0
             
             # 確保檔案寫入完成後再繼續（避免競爭條件）
             time.sleep(1)
             
             self.logger.copilot_interaction(f"第 {round_number} 輪處理完成", "SUCCESS", project_name)
-            return True, response  # 返回成功狀態和回應內容，供後續輪次使用
+            # 全域模式返回 1（處理了 1 個 prompt）
+            return True, 1
             
         except Exception as e:
             error_msg = f"處理專案時發生錯誤: {str(e)}"
@@ -1229,7 +1266,7 @@ class CopilotHandler:
             except:
                 pass  # 如果連錯誤日誌都無法儲存，就忽略
                 
-            return False, error_msg
+            return False, 0
     
     def clear_chat_history(self) -> bool:
         """
@@ -1435,16 +1472,17 @@ class CopilotHandler:
         
         return default_settings
 
-    def process_project_with_iterations(self, project_path: str, max_rounds: int = None) -> bool:
+    def process_project_with_iterations(self, project_path: str, max_rounds: int = None, max_lines: int = None) -> Tuple[bool, int]:
         """
         處理一個專案的多輪互動
         
         Args:
             project_path: 專案路徑
             max_rounds: 最大互動輪數
+            max_lines: 最大處理行數限制（僅用於專案專用模式，None 表示無限制）
             
         Returns:
-            bool: 處理是否成功
+            Tuple[bool, int]: (處理是否成功, 實際處理的行數/函數數)
         """
         try:
             # 導入config以確保作用域可訪問
@@ -1462,13 +1500,13 @@ class CopilotHandler:
             
             # 如果是專案專用提示詞模式，使用按行處理
             if prompt_source_mode == "project":
-                return self._process_project_with_project_prompts(project_path, max_rounds, interaction_settings)
+                return self._process_project_with_project_prompts(project_path, max_rounds, interaction_settings, max_lines=max_lines)
             
             # 檢查是否啟用多輪互動
             if not interaction_settings["interaction_enabled"]:
                 self.logger.info("多輪互動功能已停用，執行單輪互動")
-                success, result = self.process_project_complete(project_path, round_number=1)
-                return success
+                success, processed = self.process_project_complete(project_path, round_number=1, max_lines=max_lines)
+                return success, processed
             
             # 使用設定中的參數
             if max_rounds is None:
@@ -1540,20 +1578,20 @@ class CopilotHandler:
                     vscode_controller.clear_copilot_memory(modification_action)
                     time.sleep(1)  # 等待記憶清除完成
                 
-                # 處理本輪互動
-                success, result = self.process_project_complete(
+                # 處理本輪互動（傳遞 max_lines，雖然全域模式不使用）
+                success, processed = self.process_project_complete(
                     project_path, 
                     use_smart_wait=None,
                     round_number=round_num,
-                    custom_prompt=current_prompt
+                    custom_prompt=current_prompt,
+                    max_lines=max_lines
                 )
                 
                 if success:
                     success_count += 1
-                    last_response = result
-                    self.logger.info(f"✅ 第 {round_num} 輪互動成功")
+                    self.logger.info(f"✅ 第 {round_num} 輪互動成功（處理 {processed} 個 prompt）")
                 else:
-                    self.logger.error(f"❌ 第 {round_num} 輪互動失敗: {result}")
+                    self.logger.error(f"❌ 第 {round_num} 輪互動失敗")
                     break
                 
                 # 輪次間暫停
@@ -1569,17 +1607,18 @@ class CopilotHandler:
             self.logger.info(f"所有互動輪次完成，進入穩定期 {cooldown_time} 秒...")
             time.sleep(cooldown_time)
             
+            # 全域模式：返回成功狀態和處理數（1 個 prompt）
             # 如果全部成功，記錄成功狀態
             if success_count == max_rounds:
                 self.logger.info(f"✅ {project_name} 所有互動輪次成功完成")
-                return True
+                return True, 1
             else:
                 self.logger.warning(f"⚠️ {project_name} 只完成部分互動: {total_result}")
-                return success_count > 0  # 至少完成一輪即為部分成功
+                return success_count > 0, 1  # 至少完成一輪即為部分成功，仍返回1（處理了1個prompt）
                 
         except Exception as e:
             self.logger.error(f"專案互動處理出錯: {str(e)}")
-            return False
+            return False, 0
     
     def _perform_cwe_scan_for_prompt(
         self, 

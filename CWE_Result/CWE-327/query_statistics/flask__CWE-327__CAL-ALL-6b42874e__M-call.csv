@@ -1,3 +1,0 @@
-檔案路徑,函式名稱,round1,round2,round3,QueryTimes
-examples/tutorial/flaskr/auth.py,login,0,0,0,All-Safe
-src/flask/sessions.py,_lazy_sha1,1 (Bandit),#,#,1

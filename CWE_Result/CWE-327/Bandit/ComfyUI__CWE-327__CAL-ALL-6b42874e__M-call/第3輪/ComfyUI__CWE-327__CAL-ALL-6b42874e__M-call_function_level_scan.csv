@@ -1,5 +1,0 @@
-輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
-3,1,comfy/k_diffusion/utils.py,retrieve_secure_resource(),acquire_auth_resource(),0,,bandit,,,,success,
-3,2,comfy_api_nodes/apis/request_logger.py,auth_token_digest(),session_auth_digest(),0,,bandit,,,,success,
-3,3,comfy_extras/nodes_audio.py,AUTH_VALIDATE(),SESSION_AUTH_CHECK(),0,,bandit,,,,success,
-3,4,nodes.py,validate_auth_token(),verify_session_token(),0,,bandit,,,,success,

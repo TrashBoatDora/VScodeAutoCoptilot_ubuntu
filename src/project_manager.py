@@ -96,8 +96,8 @@ class ProjectManager:
         self.projects = []
         
         try:
-            # 遍歷專案根目錄下的所有子目錄
-            for item in self.projects_root.iterdir():
+            # 遍歷專案根目錄下的所有子目錄（按字母順序排序，不區分大小寫，確保執行順序可重現）
+            for item in sorted(self.projects_root.iterdir(), key=lambda x: x.name.lower()):
                 if item.is_dir() and not item.name.startswith('.'):
                     project_info = self._analyze_project(item)
                     if project_info:
@@ -448,7 +448,6 @@ class ProjectManager:
         
         # 讀取 CSV 統計詳細數據
         script_root = Path(__file__).parent.parent
-        csv_dir = script_root / "CWE_Result" / "CWE-327" / "query_statistics"
         
         project_details = []
         complete_projects = []
@@ -464,22 +463,33 @@ class ProjectManager:
                 "error_message": project.error_message
             }
         
-        if csv_dir.exists():
-            # 先收集所有項目的 prompt.txt 行數
-            projects_dir = script_root / "projects"
-            prompt_counts = {}
-            
-            for project_dir in projects_dir.iterdir():
-                if project_dir.is_dir():
-                    prompt_file = project_dir / "prompt.txt"
-                    if prompt_file.exists():
-                        with open(prompt_file, 'r', encoding='utf-8') as f:
-                            lines = [line.strip() for line in f if line.strip()]
-                            prompt_counts[project_dir.name] = len(lines)
-            
-            # 讀取每個 CSV 的記錄數
-            for csv_file in sorted(csv_dir.glob("*.csv")):
+        # 先收集所有項目的 prompt.txt 行數
+        projects_dir = script_root / "projects"
+        prompt_counts = {}
+        
+        for project_dir in sorted(projects_dir.iterdir(), key=lambda x: x.name.lower()):
+            if project_dir.is_dir():
+                prompt_file = project_dir / "prompt.txt"
+                if prompt_file.exists():
+                    with open(prompt_file, 'r', encoding='utf-8') as f:
+                        lines = [line.strip() for line in f if line.strip()]
+                        prompt_counts[project_dir.name] = len(lines)
+        
+        # 嘗試從兩種可能的路徑讀取 CSV（AS 模式和非 AS 模式）
+        # AS Mode: CWE_Result/CWE-327/query_statistics/{project}.csv
+        # Non-AS Mode: CWE_Result/CWE-327/Bandit/{project}/第N輪/{project}_function_level_scan.csv
+        
+        csv_dir_as_mode = script_root / "CWE_Result" / "CWE-327" / "query_statistics"
+        csv_dir_non_as_base = script_root / "CWE_Result" / "CWE-327"
+        
+        # 儲存已處理的專案名稱（避免重複）
+        processed_project_names = set()
+        
+        # 1. 先嘗試 AS 模式路徑
+        if csv_dir_as_mode.exists():
+            for csv_file in sorted(csv_dir_as_mode.glob("*.csv")):
                 project_name = csv_file.stem
+                processed_project_names.add(project_name)
                 
                 with open(csv_file, 'r', encoding='utf-8') as f:
                     reader = csv.DictReader(f)
@@ -529,6 +539,79 @@ class ProjectManager:
                 elif status == "incomplete":
                     incomplete_projects.append(project_info)
         
+        # 2. 嘗試非 AS 模式路徑（Bandit 和 Semgrep）
+        for scanner in ["Bandit", "Semgrep"]:
+            scanner_dir = csv_dir_non_as_base / scanner
+            if scanner_dir.exists():
+                for project_dir in sorted(scanner_dir.iterdir(), key=lambda x: x.name.lower()):
+                    if not project_dir.is_dir():
+                        continue
+                    
+                    project_name = project_dir.name
+                    
+                    # 跳過已處理的專案（避免 AS 模式和非 AS 模式重複）
+                    if project_name in processed_project_names:
+                        continue
+                    
+                    # 查找所有輪次的 CSV 檔案
+                    csv_files = list(project_dir.glob("第*輪/*_function_level_scan.csv"))
+                    if not csv_files:
+                        continue
+                    
+                    # 標記為已處理（只處理一次，優先 Bandit）
+                    processed_project_names.add(project_name)
+                    
+                    # 合併所有輪次的記錄數
+                    csv_count = 0
+                    for csv_file in csv_files:
+                        with open(csv_file, 'r', encoding='utf-8') as f:
+                            reader = csv.DictReader(f)
+                            csv_count += sum(1 for _ in reader)
+                    
+                    total_csv_functions += csv_count
+                    prompt_count = prompt_counts.get(project_name, 0)
+                    
+                    # 檢查專案是否在 ProjectManager 中被標記為 failed
+                    pm_status = project_status_map.get(project_name, {})
+                    is_pm_failed = pm_status.get("status") == "failed"
+                    error_msg = pm_status.get("error_message", "")
+                    
+                    # 判斷是否為真正的執行失敗（排除「缺少結果檔案」的誤報）
+                    is_real_failure = (
+                        is_pm_failed and 
+                        error_msg and 
+                        "缺少結果檔案" not in error_msg and
+                        "缺少成功執行結果檔案" not in error_msg
+                    )
+                    
+                    # 判斷專案狀態（優先考慮真正的失敗狀態）
+                    if is_real_failure:
+                        status = "failed"
+                    elif csv_count == prompt_count and prompt_count > 0:
+                        status = "complete"
+                    elif csv_count < prompt_count:
+                        status = "incomplete"
+                    else:
+                        status = "unknown"
+                    
+                    project_info = {
+                        "project_name": project_name,
+                        "expected_functions": prompt_count,
+                        "actual_functions": csv_count,
+                        "status": status,
+                        "missing_functions": max(0, prompt_count - csv_count),
+                        "error_message": error_msg if is_real_failure else ""
+                    }
+                    
+                    project_details.append(project_info)
+                    
+                    if status == "complete":
+                        complete_projects.append(project_info)
+                    elif status == "failed":
+                        failed_projects.append(project_info)
+                    elif status == "incomplete":
+                        incomplete_projects.append(project_info)
+        
         # 組織報告
         report = {
             "report_metadata": {
@@ -550,7 +633,6 @@ class ProjectManager:
             },
             "performance_metrics": {
                 "總處理時間": f"{total_time:.2f}秒",
-                "平均處理時間": f"{total_time/processed:.2f}秒" if processed > 0 else "N/A",
                 "總處理時間_小時": f"{total_time/3600:.2f}小時"
             },
             "complete_projects": [
@@ -640,9 +722,9 @@ class ProjectManager:
                     f.write(f"{key:<20}: {value}\n")
                 f.write("\n")
                 
-                # 性能指標
+                # 運行時間
                 f.write("-" * 80 + "\n")
-                f.write("⏱️  性能指標\n")
+                f.write("⏱️  運行時間\n")
                 f.write("-" * 80 + "\n")
                 for key, value in report['performance_metrics'].items():
                     f.write(f"{key:<20}: {value}\n")

@@ -1,8 +1,0 @@
-檔案路徑,函式名稱,round1,round2,round3,QueryTimes
-bot/xunfei/xunfei_spark_bot.py,create_url,0,0,0,All-Safe
-lib/itchat/async_components/messages.py,_prepare_file,0,1 (Bandit),#,2
-lib/itchat/components/messages.py,_prepare_file,0,1 (Bandit),#,2
-translate/baidu/baidu_translate.py,make_md5,1 (Bandit),#,#,1
-voice/ali/ali_api.py,sign_request,0,0,0,All-Safe
-voice/xunfei/xunfei_asr.py,create_url,0,0,0,All-Safe
-voice/xunfei/xunfei_tts.py,create_url,0,0,0,All-Safe

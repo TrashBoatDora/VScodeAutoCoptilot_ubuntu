@@ -301,6 +301,7 @@ class HybridUIAutomationScript:
                     break
                 
                 # 檢查檔案數量限制（在處理專案前）
+                max_lines_for_project = None  # None 表示無限制
                 if self.max_files_limit > 0:
                     # 計算此專案的檔案數量（prompt.txt 行數）
                     project_file_count = config.count_project_prompt_lines(project.path)
@@ -321,6 +322,8 @@ class HybridUIAutomationScript:
                     
                     # 如果處理此專案會超過限制，則部分處理
                     remaining_quota = self.max_files_limit - self.total_files_processed
+                    max_lines_for_project = min(remaining_quota, project_file_count)
+                    
                     if project_file_count > remaining_quota:
                         self.logger.info(
                             f"📊 專案 {project.name} 有 {project_file_count} 個檔案，"
@@ -332,8 +335,8 @@ class HybridUIAutomationScript:
                             f"（已處理: {self.total_files_processed}/{self.max_files_limit}）"
                         )
                 
-                # 處理單一專案
-                success = self._process_single_project(project)
+                # 處理單一專案（傳遞檔案數量限制）
+                success = self._process_single_project(project, max_lines=max_lines_for_project)
                 
                 if success:
                     total_success += 1
@@ -360,12 +363,13 @@ class HybridUIAutomationScript:
             self.logger.error(f"處理專案時發生錯誤: {str(e)}")
             return False
     
-    def _process_single_project(self, project: ProjectInfo) -> bool:
+    def _process_single_project(self, project: ProjectInfo, max_lines: int = None) -> bool:
         """
         處理單一專案
         
         Args:
             project: 專案資訊
+            max_lines: 最大處理行數限制（None 表示無限制）
             
         Returns:
             bool: 處理是否成功
@@ -386,8 +390,8 @@ class HybridUIAutomationScript:
             # 更新專案狀態為處理中
             self.project_manager.update_project_status(project.name, "processing")
             
-            # 直接執行專案自動化（移除重試機制）
-            success = self._execute_project_automation(project, project_logger)
+            # 直接執行專案自動化（移除重試機制，傳遞行數限制）
+            success = self._execute_project_automation(project, project_logger, max_lines=max_lines)
             
             # 計算處理時間
             processing_time = time.time() - start_time
@@ -417,13 +421,14 @@ class HybridUIAutomationScript:
             self.logger.error(f"處理專案 {project.name} 時發生未捕獲的錯誤: {error_msg}")
             return False
     
-    def _execute_project_automation(self, project: ProjectInfo, project_logger) -> bool:
+    def _execute_project_automation(self, project: ProjectInfo, project_logger, max_lines: int = None) -> bool:
         """
         執行專案自動化的核心邏輯
         
         Args:
             project: 專案資訊
             project_logger: 專案日誌記錄器
+            max_lines: 最大處理行數限制（None 表示無限制）
             
         Returns:
             bool: 執行是否成功
@@ -464,9 +469,9 @@ class HybridUIAutomationScript:
             if artificial_suicide_mode:
                 # 使用 Artificial Suicide 攻擊模式
                 project_logger.log(f"處理 Copilot Chat (Artificial Suicide 攻擊模式，輪數: {artificial_suicide_rounds})")
-                success, files_processed = self._execute_artificial_suicide_mode(project, artificial_suicide_rounds, project_logger)
+                success, files_processed = self._execute_artificial_suicide_mode(project, artificial_suicide_rounds, project_logger, max_lines=max_lines)
                 
-                # 更新檔案計數器
+                # 更新檔案計數器（使用實際處理數量）
                 self.total_files_processed += files_processed
                 self.logger.info(f"📊 已處理 {files_processed} 個檔案（總計: {self.total_files_processed}）")
                 
@@ -475,30 +480,28 @@ class HybridUIAutomationScript:
             elif interaction_enabled:
                 # 使用反覆互動功能
                 project_logger.log(f"處理 Copilot Chat (啟用反覆互動功能，最大輪數: {max_rounds})")
-                success = self.copilot_handler.process_project_with_iterations(project.path, max_rounds)
+                success, files_processed = self.copilot_handler.process_project_with_iterations(project.path, max_rounds, max_lines=max_lines)
                 
-                # 更新檔案計數器（根據 prompt.txt 行數）
-                files_in_project = config.count_project_prompt_lines(project.path)
-                self.total_files_processed += files_in_project
-                self.logger.info(f"📊 已處理 {files_in_project} 個檔案（總計: {self.total_files_processed}）")
+                # 更新檔案計數器（使用實際處理數量）
+                self.total_files_processed += files_processed
+                self.logger.info(f"📊 已處理 {files_processed} 個檔案（總計: {self.total_files_processed}）")
                 
                 if not success:
                     raise AutomationError("Copilot 反覆互動處理失敗", ErrorType.COPILOT_ERROR)
             else:
                 # 使用一般互動模式
                 project_logger.log(f"處理 Copilot Chat (智能等待: {'開啟' if self.use_smart_wait else '關閉'})")
-                success, error_msg = self.copilot_handler.process_project_complete(
-                    project.path, use_smart_wait=self.use_smart_wait
+                success, files_processed = self.copilot_handler.process_project_complete(
+                    project.path, use_smart_wait=self.use_smart_wait, max_lines=max_lines
                 )
                 
-                # 更新檔案計數器（根據 prompt.txt 行數）
-                files_in_project = config.count_project_prompt_lines(project.path)
-                self.total_files_processed += files_in_project
-                self.logger.info(f"📊 已處理 {files_in_project} 個檔案（總計: {self.total_files_processed}）")
+                # 更新檔案計數器（使用實際處理數量）
+                self.total_files_processed += files_processed
+                self.logger.info(f"📊 已處理 {files_processed} 個檔案（總計: {self.total_files_processed}）")
                 
                 if not success:
                     raise AutomationError(
-                        error_msg or "Copilot 處理失敗", 
+                        "Copilot 處理失敗", 
                         ErrorType.COPILOT_ERROR
                     )
             
@@ -600,7 +603,8 @@ class HybridUIAutomationScript:
         self, 
         project: ProjectInfo, 
         num_rounds: int,
-        project_logger
+        project_logger,
+        max_lines: int = None
     ) -> Tuple[bool, int]:
         """
         執行 Artificial Suicide 攻擊模式
@@ -609,6 +613,7 @@ class HybridUIAutomationScript:
             project: 專案資訊
             num_rounds: 攻擊輪數
             project_logger: 專案日誌記錄器
+            max_lines: 最大處理行數限制（None 表示無限制）
             
         Returns:
             Tuple[bool, int]: (執行是否成功, 實際處理的檔案數)

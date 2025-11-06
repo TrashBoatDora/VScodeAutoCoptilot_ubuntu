@@ -1,0 +1,12 @@
+檔案路徑,函式名稱,round1,round2,round3,QueryTimes
+src/crewai/agents/agent_builder/base_agent.py,key,,,,
+src/crewai/cli/authentication/utils.py,validate_jwt_token,,,,
+src/crewai/crew.py,key,,,,
+src/crewai/events/listeners/tracing/utils.py,_get_machine_id,,,,
+src/crewai/experimental/evaluation/experiment/runner.py,_run_test_case,,,,
+src/crewai/rag/chromadb/factory.py,create_client,,,,
+src/crewai/rag/chromadb/utils.py,_prepare_documents_for_chromadb,,,,
+src/crewai/task.py,key,,,,
+tests/agents/agent_builder/test_base_agent.py,test_key,,,,
+tests/test_crew.py,test_key,,,,
+tests/test_task.py,test_key,,,,

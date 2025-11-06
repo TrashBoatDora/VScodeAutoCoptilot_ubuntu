@@ -63,16 +63,19 @@ class ArtificialSuicideMode:
         
         # 載入專案的 prompt.txt
         self.prompt_lines = self._load_prompt_lines()
+        original_line_count = len(self.prompt_lines)  # 記錄原始行數
         
         # 如果有檔案數量限制，計算本專案可處理的行數
         if self.max_files_limit > 0:
             remaining_quota = self.max_files_limit - self.files_processed_so_far
             if remaining_quota <= 0:
-                self.logger.warning(f"已達到檔案處理限制，將不處理任何檔案")
+                self.logger.warning(f"⚠️  已達到檔案處理限制 ({self.files_processed_so_far}/{self.max_files_limit})，將不處理任何檔案")
                 self.prompt_lines = []
             elif len(self.prompt_lines) > remaining_quota:
-                self.logger.info(f"檔案數量限制: 僅處理前 {remaining_quota}/{len(self.prompt_lines)} 行")
+                self.logger.info(f"📊 檔案數量限制: 專案有 {original_line_count} 行，僅處理前 {remaining_quota} 行（已處理: {self.files_processed_so_far}/{self.max_files_limit}）")
                 self.prompt_lines = self.prompt_lines[:remaining_quota]
+            else:
+                self.logger.info(f"📊 檔案數量限制: 專案有 {original_line_count} 行，全部處理（已處理: {self.files_processed_so_far}/{self.max_files_limit}）")
         
         # 儲存每一輪每一行的回應（用於串接到下一輪）
         # 結構: {round_num: {line_idx: response_text}}
@@ -288,7 +291,7 @@ class ArtificialSuicideMode:
                 
                 if not success:
                     self.logger.error(f"❌ 第 {round_num} 輪執行失敗")
-                    return False
+                    return False, self.files_processed_in_project
                 
                 # 即時更新該輪的統計資料
                 self.logger.info(f"📊 更新第 {round_num} 輪統計...")

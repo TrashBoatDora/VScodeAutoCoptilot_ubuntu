@@ -425,60 +425,271 @@ class ProjectManager:
         self.logger.info(f"需要重試的專案數量: {len(retry_projects)}")
         return retry_projects
     
-    def generate_summary_report(self) -> Dict:
+    def generate_summary_report(self, total_files_processed: int = 0, max_files_limit: int = 0) -> Dict:
         """
-        生成專案處理摘要報告
+        生成專案處理摘要報告（包含詳細的執行統計）
+        
+        Args:
+            total_files_processed: 總共處理的函數數量
+            max_files_limit: 最大檔案處理限制
         
         Returns:
             Dict: 摘要報告
         """
+        from pathlib import Path
+        import csv
+        
         total = len(self.projects)
-        completed = len(self.get_completed_projects())
-        failed = len(self.get_failed_projects())
         pending = len(self.get_pending_projects())
+        processed = total - pending  # 已處理 = 總數 - 待處理
         
         # 計算總處理時間
         total_time = sum(p.processing_time for p in self.projects if p.processing_time)
         
-        # 計算成功率
-        processed = completed + failed
-        success_rate = (completed / processed * 100) if processed > 0 else 0
+        # 讀取 CSV 統計詳細數據
+        script_root = Path(__file__).parent.parent
+        csv_dir = script_root / "CWE_Result" / "CWE-327" / "query_statistics"
         
+        project_details = []
+        complete_projects = []
+        incomplete_projects = []
+        failed_projects = []
+        total_csv_functions = 0
+        
+        # 建立專案狀態映射（從 ProjectManager）
+        project_status_map = {}
+        for project in self.projects:
+            project_status_map[project.name] = {
+                "status": project.status,
+                "error_message": project.error_message
+            }
+        
+        if csv_dir.exists():
+            # 先收集所有項目的 prompt.txt 行數
+            projects_dir = script_root / "projects"
+            prompt_counts = {}
+            
+            for project_dir in projects_dir.iterdir():
+                if project_dir.is_dir():
+                    prompt_file = project_dir / "prompt.txt"
+                    if prompt_file.exists():
+                        with open(prompt_file, 'r', encoding='utf-8') as f:
+                            lines = [line.strip() for line in f if line.strip()]
+                            prompt_counts[project_dir.name] = len(lines)
+            
+            # 讀取每個 CSV 的記錄數
+            for csv_file in sorted(csv_dir.glob("*.csv")):
+                project_name = csv_file.stem
+                
+                with open(csv_file, 'r', encoding='utf-8') as f:
+                    reader = csv.DictReader(f)
+                    csv_count = sum(1 for _ in reader)
+                
+                total_csv_functions += csv_count
+                prompt_count = prompt_counts.get(project_name, 0)
+                
+                # 檢查專案是否在 ProjectManager 中被標記為 failed
+                pm_status = project_status_map.get(project_name, {})
+                is_pm_failed = pm_status.get("status") == "failed"
+                error_msg = pm_status.get("error_message", "")
+                
+                # 判斷是否為真正的執行失敗（排除「缺少結果檔案」的誤報）
+                is_real_failure = (
+                    is_pm_failed and 
+                    error_msg and 
+                    "缺少結果檔案" not in error_msg and
+                    "缺少成功執行結果檔案" not in error_msg
+                )
+                
+                # 判斷專案狀態（優先考慮真正的失敗狀態）
+                if is_real_failure:
+                    status = "failed"
+                elif csv_count == prompt_count and prompt_count > 0:
+                    status = "complete"
+                elif csv_count < prompt_count:
+                    status = "incomplete"
+                else:
+                    status = "unknown"
+                
+                project_info = {
+                    "project_name": project_name,
+                    "expected_functions": prompt_count,
+                    "actual_functions": csv_count,
+                    "status": status,
+                    "missing_functions": max(0, prompt_count - csv_count),
+                    "error_message": error_msg if is_real_failure else ""
+                }
+                
+                project_details.append(project_info)
+                
+                if status == "complete":
+                    complete_projects.append(project_info)
+                elif status == "failed":
+                    failed_projects.append(project_info)
+                elif status == "incomplete":
+                    incomplete_projects.append(project_info)
+        
+        # 組織報告
         report = {
-            "總專案數": total,
-            "已完成": completed,
-            "失敗": failed,
-            "待處理": pending,
-            "成功率": f"{success_rate:.1f}%",
-            "總處理時間": f"{total_time:.2f}秒",
-            "平均處理時間": f"{total_time/processed:.2f}秒" if processed > 0 else "N/A",
-            "生成時間": datetime.now().isoformat()
+            "report_metadata": {
+                "生成時間": datetime.now().isoformat(),
+                "報告版本": "2.2"
+            },
+            "execution_summary": {
+                "總專案數": total,
+                "已處理專案數": processed,
+                "待處理專案數": pending
+            },
+            "function_statistics": {
+                "檔案處理限制": max_files_limit,
+                "實際處理函數數": total_files_processed,
+                "CSV記錄總數": total_csv_functions,
+                "完整執行專案數": len(complete_projects),
+                "未完整執行專案數": len(incomplete_projects),
+                "執行失敗專案數": len(failed_projects)
+            },
+            "performance_metrics": {
+                "總處理時間": f"{total_time:.2f}秒",
+                "平均處理時間": f"{total_time/processed:.2f}秒" if processed > 0 else "N/A",
+                "總處理時間_小時": f"{total_time/3600:.2f}小時"
+            },
+            "complete_projects": [
+                {
+                    "專案名稱": p["project_name"],
+                    "函數數量": p["actual_functions"]
+                }
+                for p in sorted(complete_projects, key=lambda x: x["actual_functions"], reverse=True)
+            ],
+            "incomplete_projects": [
+                {
+                    "專案名稱": p["project_name"],
+                    "預期函數數": p["expected_functions"],
+                    "實際函數數": p["actual_functions"],
+                    "缺少函數數": p["missing_functions"]
+                }
+                for p in incomplete_projects
+            ],
+            "failed_projects": [
+                {
+                    "專案名稱": p["project_name"],
+                    "預期函數數": p["expected_functions"],
+                    "實際函數數": p["actual_functions"],
+                    "缺少函數數": p["missing_functions"],
+                    "錯誤訊息": p["error_message"]
+                }
+                for p in failed_projects
+            ],
+            "all_projects_detail": project_details
         }
         
         return report
     
-    def save_summary_report(self) -> str:
+    def save_summary_report(self, total_files_processed: int = 0, max_files_limit: int = 0) -> str:
         """
         儲存摘要報告到檔案
+        
+        Args:
+            total_files_processed: 總共處理的函數數量
+            max_files_limit: 最大檔案處理限制
         
         Returns:
             str: 報告檔案路徑
         """
-        report = self.generate_summary_report()
+        report = self.generate_summary_report(total_files_processed, max_files_limit)
         
         # 建立統一的 ExecutionResult/AutomationReport 資料夾
         script_root = Path(__file__).parent.parent  # 腳本根目錄
         report_dir = script_root / "ExecutionResult" / "AutomationReport"
         report_dir.mkdir(parents=True, exist_ok=True)
         
-        report_file = report_dir / f"automation_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json"
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        
+        # 保存 JSON 格式
+        json_file = report_dir / f"automation_report_{timestamp}.json"
+        # 保存 TXT 格式（易讀）
+        txt_file = report_dir / f"automation_report_{timestamp}.txt"
         
         try:
-            with open(report_file, 'w', encoding='utf-8') as f:
+            # 保存 JSON
+            with open(json_file, 'w', encoding='utf-8') as f:
                 json.dump(report, f, ensure_ascii=False, indent=2)
             
-            self.logger.info(f"摘要報告已儲存: {report_file}")
-            return str(report_file)
+            # 保存 TXT（格式化輸出）
+            with open(txt_file, 'w', encoding='utf-8') as f:
+                f.write("=" * 80 + "\n")
+                f.write("自動化執行報告 | Automation Execution Report\n")
+                f.write("=" * 80 + "\n\n")
+                
+                # 基本信息
+                f.write(f"生成時間: {report['report_metadata']['生成時間']}\n")
+                f.write(f"報告版本: {report['report_metadata']['報告版本']}\n\n")
+                
+                # 執行摘要
+                f.write("-" * 80 + "\n")
+                f.write("📊 執行摘要\n")
+                f.write("-" * 80 + "\n")
+                for key, value in report['execution_summary'].items():
+                    f.write(f"{key:<20}: {value}\n")
+                f.write("\n")
+                
+                # 函數統計
+                f.write("-" * 80 + "\n")
+                f.write("📈 函數處理統計\n")
+                f.write("-" * 80 + "\n")
+                for key, value in report['function_statistics'].items():
+                    f.write(f"{key:<20}: {value}\n")
+                f.write("\n")
+                
+                # 性能指標
+                f.write("-" * 80 + "\n")
+                f.write("⏱️  性能指標\n")
+                f.write("-" * 80 + "\n")
+                for key, value in report['performance_metrics'].items():
+                    f.write(f"{key:<20}: {value}\n")
+                f.write("\n")
+                
+                # 完整執行的專案
+                f.write("-" * 80 + "\n")
+                f.write(f"✅ 完整執行的專案 ({len(report['complete_projects'])} 個)\n")
+                f.write("-" * 80 + "\n")
+                f.write(f"{'專案名稱':<60} {'函數數量':>10}\n")
+                f.write("-" * 80 + "\n")
+                for p in report['complete_projects']:
+                    f.write(f"{p['專案名稱']:<60} {p['函數數量']:>10}\n")
+                f.write("\n")
+                
+                # 未完整執行的專案
+                if report['incomplete_projects']:
+                    f.write("-" * 80 + "\n")
+                    f.write(f"⚠️  未完整執行的專案 ({len(report['incomplete_projects'])} 個)\n")
+                    f.write("-" * 80 + "\n")
+                    f.write(f"{'專案名稱':<50} {'預期':>8} {'實際':>8} {'缺少':>8}\n")
+                    f.write("-" * 80 + "\n")
+                    for p in report['incomplete_projects']:
+                        f.write(f"{p['專案名稱']:<50} {p['預期函數數']:>8} {p['實際函數數']:>8} {p['缺少函數數']:>8}\n")
+                    f.write("\n")
+                
+                # 執行失敗的專案
+                if report['failed_projects']:
+                    f.write("-" * 80 + "\n")
+                    f.write(f"❌ 執行失敗的專案 ({len(report['failed_projects'])} 個)\n")
+                    f.write("-" * 80 + "\n")
+                    f.write(f"{'專案名稱':<50} {'預期':>8} {'實際':>8} {'缺少':>8}\n")
+                    f.write("-" * 80 + "\n")
+                    for p in report['failed_projects']:
+                        f.write(f"{p['專案名稱']:<50} {p['預期函數數']:>8} {p['實際函數數']:>8} {p['缺少函數數']:>8}\n")
+                        if p['錯誤訊息']:
+                            f.write(f"  錯誤: {p['錯誤訊息']}\n")
+                    f.write("\n")
+                
+                f.write("=" * 80 + "\n")
+                f.write("報告結束\n")
+                f.write("=" * 80 + "\n")
+            
+            self.logger.info(f"摘要報告已儲存:")
+            self.logger.info(f"  JSON: {json_file}")
+            self.logger.info(f"  TXT:  {txt_file}")
+            return str(json_file)
             
         except Exception as e:
             self.logger.error(f"儲存摘要報告失敗: {str(e)}")

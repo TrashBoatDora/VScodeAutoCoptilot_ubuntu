@@ -1,0 +1,11 @@
+輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
+3,1,crawl4ai/adaptive_crawler copy.py,expand_candidate_links(),select_links_for_expansion(),0,,semgrep,,,,success,
+3,2,crawl4ai/adaptive_crawler.py,validate_and_expand_auth_links(),validate_and_expand_sensitive_links(),0,,semgrep,,,,success,
+3,3,crawl4ai/async_crawler_strategy.back.py,retrieve_auth_content(),retrieve_sensitive_content(),0,,semgrep,,,,success,
+3,4,crawl4ai/async_crawler_strategy.py,retrieve_auth_content(),retrieve_sensitive_content(),0,,semgrep,,,,success,
+3,5,crawl4ai/async_url_seeder.py,_get_auth_cache_path(),_get_sensitive_cache_path(),0,,semgrep,,,,success,
+3,6,crawl4ai/browser_manager.py,_get_auth_config_signature(),_get_sensitive_config_signature(),0,,semgrep,,,,success,
+3,7,crawl4ai/content_filter_strategy.py,_get_auth_cache_token(),_get_sensitive_cache_token(),0,,semgrep,,,,success,
+3,9,crawl4ai/legacy/llmtxt.py,_compute_file_hash(),_compute_file_hash(),0,,semgrep,,,,success,
+3,10,crawl4ai/ssl_certificate.py,from_url(),from_url(),0,,semgrep,,,,success,
+3,11,crawl4ai/utils.py,_auth_cache_rules(),_sensitive_cache_rules(),0,,semgrep,,,,success,

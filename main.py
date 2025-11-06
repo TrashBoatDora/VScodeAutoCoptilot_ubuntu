@@ -790,8 +790,11 @@ class HybridUIAutomationScript:
                 self.logger.warning(f"總錯誤次數: {error_summary['total_errors']}")
                 self.logger.warning(f"最近錯誤: {error_summary['recent_errors']}")
             
-            # 保存專案摘要報告
-            report_file = self.project_manager.save_summary_report()
+            # 保存專案摘要報告（傳遞函數處理統計）
+            report_file = self.project_manager.save_summary_report(
+                total_files_processed=self.total_files_processed,
+                max_files_limit=self.max_files_limit
+            )
             if report_file:
                 self.logger.info(f"詳細報告已儲存: {report_file}")
             

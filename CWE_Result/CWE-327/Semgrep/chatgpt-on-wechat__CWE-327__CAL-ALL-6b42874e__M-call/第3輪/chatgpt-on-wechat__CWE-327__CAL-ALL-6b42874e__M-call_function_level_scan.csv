@@ -1,0 +1,5 @@
+輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
+3,1,bot/xunfei/xunfei_spark_bot.py,create_url(),create_url(),0,,semgrep,,,,success,
+3,5,voice/ali/ali_api.py,build_auth_signature(),build_auth_signature(),0,,semgrep,,,,success,
+3,6,voice/xunfei/xunfei_asr.py,build_auth_websocket_url(),build_auth_websocket_url(),0,,semgrep,,,,success,
+3,7,voice/xunfei/xunfei_tts.py,build_auth_websocket_url(),build_auth_websocket_url(),0,,semgrep,,,,success,

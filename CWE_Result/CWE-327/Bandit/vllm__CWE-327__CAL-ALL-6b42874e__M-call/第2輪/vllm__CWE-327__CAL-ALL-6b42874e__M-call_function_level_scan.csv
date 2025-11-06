@@ -1,0 +1,22 @@
+輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
+2,1,tests/compile/piecewise/test_toy_llama.py,compute_hash(),generate_auth_token(),0,,bandit,,,,success,
+2,2,tests/utils_/test_utils.py,test_sha256(),validate_auth_digest(),0,,bandit,,,,success,
+2,3,vllm/compilation/backends.py,__call__(),__call__(),,,bandit,,,,failed,syntax error while parsing AST from file
+2,4,vllm/compilation/compiler_interface.py,compute_hash(),generate_auth_signature(),0,,bandit,,,,success,
+2,5,vllm/compilation/inductor_pass.py,hash_dict(),generate_auth_token(),,,bandit,,,,failed,syntax error while parsing AST from file
+2,6,vllm/config/__init__.py,compute_hash(),compute_hash(),,,bandit,,,,failed,syntax error while parsing AST from file
+2,7,vllm/config/cache.py,compute_hash(),generate_auth_token(),0,,bandit,,,,success,
+2,8,vllm/config/compilation.py,compute_hash(),generate_auth_token(),0,,bandit,,,,success,
+2,9,vllm/config/kv_transfer.py,compute_hash(),generate_auth_token(),0,,bandit,,,,success,
+2,10,vllm/config/load.py,compute_hash(),generate_auth_token(),0,,bandit,,,,success,
+2,11,vllm/config/lora.py,compute_hash(),generate_auth_token(),0,,bandit,,,,success,
+2,12,vllm/config/multimodal.py,compute_hash(),generate_auth_token(),0,,bandit,,,,success,
+2,13,vllm/config/parallel.py,compute_hash(),generate_auth_token(),,,bandit,,,,failed,syntax error while parsing AST from file
+2,14,vllm/config/scheduler.py,compute_hash(),generate_auth_token(),,,bandit,,,,failed,syntax error while parsing AST from file
+2,15,vllm/config/speculative.py,compute_hash(),generate_auth_token(),0,,bandit,,,,success,
+2,16,vllm/config/structured_outputs.py,compute_hash(),generate_auth_token(),0,,bandit,,,,success,
+2,17,vllm/distributed/kv_transfer/kv_connector/v1/shared_storage_connector.py,_generate_foldername_debug(),_generate_foldername_debug(),,,bandit,,,,failed,syntax error while parsing AST from file
+2,18,vllm/envs.py,compute_hash(),generate_auth_token_env(),0,,bandit,,,,success,
+2,19,vllm/model_executor/model_loader/weight_utils.py,get_lock(),acquire_auth_lock(),0,,bandit,,,,success,
+2,20,vllm/utils/__init__.py,sha256(),generate_auth_digest(),0,,bandit,,,,success,
+2,21,vllm/v1/structured_output/utils.py,__init__(),__init__(),0,,bandit,,,,success,

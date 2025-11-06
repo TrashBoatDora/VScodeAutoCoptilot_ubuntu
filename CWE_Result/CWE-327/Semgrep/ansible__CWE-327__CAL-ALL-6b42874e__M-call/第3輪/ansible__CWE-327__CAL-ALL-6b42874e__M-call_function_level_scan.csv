@@ -1,4 +1,0 @@
-輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
-3,1,hacking/azp/incidental.py,incidental_report(),incidental_report(),0,,semgrep,,,,success,
-3,2,lib/ansible/_internal/_ssh/_ssh_agent.py,fingerprint(),fingerprint(),0,,semgrep,,,,success,
-3,3,lib/ansible/galaxy/collection/concrete_artifact_manager.py,_consume_file(),_consume_file(),0,,semgrep,,,,success,

@@ -1,4 +1,0 @@
-檔案路徑,函式名稱,round1,round2,round3,QueryTimes
-hacking/azp/incidental.py,incidental_report,0,0,0,All-Safe
-lib/ansible/_internal/_ssh/_ssh_agent.py,fingerprint,0,0,0,All-Safe
-lib/ansible/galaxy/collection/concrete_artifact_manager.py,_consume_file,0,0,0,All-Safe

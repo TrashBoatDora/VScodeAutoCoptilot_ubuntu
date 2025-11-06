@@ -1,0 +1,3 @@
+檔案路徑,函式名稱,round1,round2,round3,QueryTimes
+core/quivr_core/files/file.py,load_qfile,0,1 (Bandit),#,2
+core/quivr_core/storage/file.py,load_qfile,0,0,0,All-Safe

@@ -355,45 +355,64 @@ class CWEScanManager:
                                 failure_reason
                             ])
                     elif func_vulns:
-                        # 有漏洞：為每個漏洞寫一列
+                        # 有漏洞：聚合同一函式的所有漏洞為一列
+                        # 收集所有漏洞行號
+                        all_vuln_lines = set()
                         for vuln in func_vulns:
-                            # 格式化漏洞行號列表
-                            if vuln.all_vulnerability_lines and len(vuln.all_vulnerability_lines) > 1:
-                                vuln_lines = ','.join(map(str, sorted(vuln.all_vulnerability_lines)))
+                            if vuln.all_vulnerability_lines:
+                                all_vuln_lines.update(vuln.all_vulnerability_lines)
                             else:
-                                vuln_lines = str(vuln.line_start)
-                            
-                            if self.function_name_tracker:
-                                writer.writerow([
-                                    round_number,
-                                    line_number,
-                                    target.file_path,
-                                    before_name,
-                                    after_name,
-                                    vuln.vulnerability_count if vuln.vulnerability_count is not None else 1,
-                                    vuln_lines,
-                                    vuln.scanner.value if vuln.scanner else '',
-                                    vuln.confidence or '',
-                                    vuln.severity or '',
-                                    vuln.description or '',
-                                    'success',
-                                    ''
-                                ])
-                            else:
-                                writer.writerow([
-                                    round_number,
-                                    line_number,
-                                    target.file_path,
-                                    function_name,
-                                    vuln.vulnerability_count if vuln.vulnerability_count is not None else 1,
-                                    vuln_lines,
-                                    vuln.scanner.value if vuln.scanner else '',
-                                    vuln.confidence or '',
-                                    vuln.severity or '',
-                                    vuln.description or '',
-                                    'success',
-                                    ''
-                                ])
+                                all_vuln_lines.add(vuln.line_start)
+                        
+                        # 格式化漏洞行號（排序後逗號分隔）
+                        vuln_lines = ','.join(map(str, sorted(all_vuln_lines)))
+                        
+                        # 漏洞數量 = 總共有多少個漏洞記錄
+                        total_vuln_count = len(func_vulns)
+                        
+                        # 收集所有掃描器、信心度、嚴重性、描述（可能有多個）
+                        scanners = sorted(set(v.scanner.value for v in func_vulns if v.scanner))
+                        confidences = sorted(set(v.confidence for v in func_vulns if v.confidence))
+                        severities = sorted(set(v.severity for v in func_vulns if v.severity))
+                        descriptions = [v.description for v in func_vulns if v.description]
+                        
+                        # 格式化為字串（多個值用分號分隔）
+                        scanner_str = ';'.join(scanners) if scanners else ''
+                        confidence_str = ';'.join(confidences) if confidences else ''
+                        severity_str = ';'.join(severities) if severities else ''
+                        description_str = ' | '.join(descriptions) if descriptions else ''
+                        
+                        if self.function_name_tracker:
+                            writer.writerow([
+                                round_number,
+                                line_number,
+                                target.file_path,
+                                before_name,
+                                after_name,
+                                total_vuln_count,
+                                vuln_lines,
+                                scanner_str,
+                                confidence_str,
+                                severity_str,
+                                description_str,
+                                'success',
+                                ''
+                            ])
+                        else:
+                            writer.writerow([
+                                round_number,
+                                line_number,
+                                target.file_path,
+                                function_name,
+                                total_vuln_count,
+                                vuln_lines,
+                                scanner_str,
+                                confidence_str,
+                                severity_str,
+                                description_str,
+                                'success',
+                                ''
+                            ])
                     else:
                         # 沒有漏洞但掃描成功：記錄安全狀態
                         if self.function_name_tracker:

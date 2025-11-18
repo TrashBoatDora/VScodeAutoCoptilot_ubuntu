@@ -204,6 +204,9 @@ class QueryStatistics:
             
         Returns:
             (filepath, function_name)
+            
+        Note:
+            如果函式名稱包含多個函式（用頓號「、」分隔），只取第一個
         """
         # 移除括號
         key_without_parens = function_key.replace('()', '')
@@ -216,6 +219,11 @@ class QueryStatistics:
             if len(parts) == 2:
                 filepath = parts[0] + '.py'  # 加回 .py
                 function_name = parts[1]
+                
+                # 如果函式名稱包含多個函式（用頓號分隔），只取第一個
+                if '、' in function_name:
+                    function_name = function_name.split('、')[0].strip()
+                
                 return (filepath, function_name)
         
         # 如果找不到 .py_，嘗試找最後一個底線（向後兼容）
@@ -223,6 +231,11 @@ class QueryStatistics:
         if last_underscore != -1:
             filepath = key_without_parens[:last_underscore]
             function_name = key_without_parens[last_underscore + 1:]
+            
+            # 如果函式名稱包含多個函式（用頓號分隔），只取第一個
+            if '、' in function_name:
+                function_name = function_name.split('、')[0].strip()
+            
             return (filepath, function_name)
         else:
             # 無法分離，返回原值和空字串
@@ -332,8 +345,15 @@ class QueryStatistics:
             b_status = bandit_status.get(func_key, 'unknown')
             s_status = semgrep_status.get(func_key, 'unknown')
             
-            # 判斷掃描狀態：只要有一個成功就算成功
-            if b_status == 'success' or s_status == 'success':
+            # 判斷掃描狀態：
+            # 1. 如果有任何一個掃描器明確失敗 (failed)，優先標記為 failed
+            # 2. 如果至少有一個掃描器成功，使用成功的結果
+            # 3. 如果都是 unknown（兩個都不存在），標記為 failed
+            
+            if b_status == 'failed' or s_status == 'failed':
+                # 至少有一個掃描器明確失敗，標記為 failed
+                result[func_key] = (-1, 'failed')
+            elif b_status == 'success' or s_status == 'success':
                 # 至少有一個掃描器成功
                 if bandit_vuln > semgrep_vuln:
                     result[func_key] = (bandit_vuln, 'Bandit')
@@ -344,7 +364,7 @@ class QueryStatistics:
                 else:  # 都是 0
                     result[func_key] = (0, '')  # 無漏洞，不標記掃描器
             else:
-                # 兩個都失敗（或都不存在）
+                # 兩個都是 unknown（都不存在記錄）
                 result[func_key] = (-1, 'failed')  # 用 -1 表示 failed
         
         return result
@@ -356,6 +376,9 @@ class QueryStatistics:
         Returns:
             Dict[function_key, {round1: value, round2: value, ..., QueryTimes: value}]
             其中 function_key 格式為 "filepath::function_name"
+            
+        Note:
+            如果 CSV 中的函式名稱包含多個函式（用頓號分隔），只取第一個
         """
         if not self.csv_path.exists():
             return {}
@@ -370,6 +393,10 @@ class QueryStatistics:
                     
                     if not filepath or not function_name:
                         continue
+                    
+                    # 如果函式名稱包含多個函式（用頓號分隔），只取第一個
+                    if '、' in function_name:
+                        function_name = function_name.split('、')[0].strip()
                     
                     # 組合成唯一的 key
                     function_key = f"{filepath}::{function_name}"

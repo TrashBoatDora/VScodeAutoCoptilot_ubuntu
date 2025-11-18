@@ -34,8 +34,11 @@ class UIManager:
         """
         root = tk.Tk()
         root.title("自動化腳本設定")
-        root.geometry("480x750")  # 增加視窗高度以容納新選項
-        root.resizable(False, False)  # 固定視窗大小，防止使用者調整大小
+        root.geometry("520x780")  # 預設視窗大小
+        root.minsize(480, 720)  # 最小視窗大小
+        root.resizable(True, True)  # 允許使用者調整大小，避免選項被遮蔽
+        root.columnconfigure(0, weight=1)
+        root.rowconfigure(0, weight=1)
         
         # 設定視窗樣式
         style = ttk.Style()
@@ -54,7 +57,7 @@ class UIManager:
         
         # 專案選擇區域
         project_frame = ttk.LabelFrame(frame, text="選擇要處理的專案", padding=10)
-        project_frame.pack(fill=tk.X, pady=10)
+        project_frame.pack(fill=tk.BOTH, expand=True, pady=10)
         
         # 專案選擇狀態顯示
         self.project_status_label = ttk.Label(
@@ -105,7 +108,7 @@ class UIManager:
         
         # 等待模式選擇
         wait_frame = ttk.LabelFrame(frame, text="選擇等待 Copilot 回應的方式")
-        wait_frame.pack(fill=tk.X, pady=10)
+        wait_frame.pack(fill=tk.BOTH, expand=True, pady=10)
         
         wait_var = tk.BooleanVar(value=True)
         smart_radio = ttk.Radiobutton(
@@ -126,7 +129,7 @@ class UIManager:
         
         # === Artificial Suicide 攻擊模式設定 ===
         as_frame = ttk.LabelFrame(frame, text="🎯 Artificial Suicide 攻擊模式", padding=10)
-        as_frame.pack(fill=tk.X, pady=10)
+        as_frame.pack(fill=tk.BOTH, expand=True, pady=10)
         
         # 啟用 Artificial Suicide 勾選框
         as_var = tk.BooleanVar(value=False)
@@ -169,7 +172,7 @@ class UIManager:
         
         # === 檔案數量限制設定 ===
         limit_frame = ttk.LabelFrame(frame, text="📊 檔案數量限制", padding=10)
-        limit_frame.pack(fill=tk.X, pady=10)
+        limit_frame.pack(fill=tk.BOTH, expand=True, pady=10)
         
         # 啟用檔案數量限制勾選框
         limit_enabled_var = tk.BooleanVar(value=False)
@@ -221,7 +224,7 @@ class UIManager:
           使用設定的固定時間等待，較快但可能不準確
         """
         desc_label = ttk.Label(frame, text=description, wraplength=430)
-        desc_label.pack(pady=10, fill=tk.X)
+        desc_label.pack(pady=10, fill=tk.BOTH)
         
         # 按鈕
         btn_frame = ttk.Frame(frame)

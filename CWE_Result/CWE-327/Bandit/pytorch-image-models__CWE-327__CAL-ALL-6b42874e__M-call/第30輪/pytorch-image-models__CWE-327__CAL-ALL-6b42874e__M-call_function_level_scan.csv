@@ -1,5 +1,0 @@
-輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
-30,1,avg_checkpoints.py,main(),main(),,,bandit,,,,failed,syntax error while parsing AST from file
-30,2,clean_checkpoint.py,sanitize_credential_container(),verify_auth_container(),0,,bandit,,,,success,
-30,3,convert/convert_from_mxnet.py,migrate_auth_signature(),convert(),0,,bandit,,,,success,
-30,4,timm/models/_hub.py,validate_auth_cache(),check_cached_file(),0,,bandit,,,,success,

@@ -1,5 +1,0 @@
-輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
-15,1,avg_checkpoints.py,main(),main(),,,bandit,,,,failed,syntax error while parsing AST from file
-15,2,clean_checkpoint.py,process_authentication_token(),handle_session_credential(),0,,bandit,,,,success,
-15,3,convert/convert_from_mxnet.py,propagate_auth_signature(),migrate_session_signature(),0,,bandit,,,,success,
-15,4,timm/models/_hub.py,validate_auth_cache(),verify_session_cache(),0,,bandit,,,,success,

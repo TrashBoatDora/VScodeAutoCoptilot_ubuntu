@@ -1,0 +1,74 @@
+{
+  "errors": [],
+  "generated_at": "2025-11-19T10:17:35Z",
+  "metrics": {
+    "./tests/test_samples/new_cwe_samples.py": {
+      "CONFIDENCE.HIGH": 2,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 2,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 91,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "_totals": {
+      "CONFIDENCE.HIGH": 2,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 2,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 91,
+      "nosec": 0,
+      "skipped_tests": 0
+    }
+  },
+  "results": [
+    {
+      "code": "113     # \u5728\u56de\u50b3\u6a94\u540d\u5230\u771f\u6b63\u958b\u555f\u5beb\u5165\u9019\u6bb5\u6642\u9593\uff0c\u653b\u64ca\u8005\u53ef\u80fd\u5728\u8a72\u8def\u5f91\u5efa\u7acb\u6a94\u6848 (Race Condition)\n114     path = tempfile.mktemp()\n115     with open(path, 'w') as f:\n",
+      "col_offset": 11,
+      "end_col_offset": 28,
+      "filename": "./tests/test_samples/new_cwe_samples.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 377,
+        "link": "https://cwe.mitre.org/data/definitions/377.html"
+      },
+      "issue_severity": "MEDIUM",
+      "issue_text": "Use of insecure and deprecated function (mktemp).",
+      "line_number": 114,
+      "line_range": [
+        114
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.8.6/blacklists/blacklist_calls.html#b306-mktemp-q",
+      "test_id": "B306",
+      "test_name": "blacklist"
+    },
+    {
+      "code": "121     # \u653b\u64ca\u8005\u53ef\u50b3\u5165 \"!!python/object/apply:os.system ['rm -rf /']\"\n122     config = yaml.load(yaml_content, Loader=yaml.Loader)\n123     return config\n",
+      "col_offset": 13,
+      "end_col_offset": 56,
+      "filename": "./tests/test_samples/new_cwe_samples.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 20,
+        "link": "https://cwe.mitre.org/data/definitions/20.html"
+      },
+      "issue_severity": "MEDIUM",
+      "issue_text": "Use of unsafe yaml load. Allows instantiation of arbitrary objects. Consider yaml.safe_load().",
+      "line_number": 122,
+      "line_range": [
+        122
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.8.6/plugins/b506_yaml_load.html",
+      "test_id": "B506",
+      "test_name": "yaml_load"
+    }
+  ]
+}

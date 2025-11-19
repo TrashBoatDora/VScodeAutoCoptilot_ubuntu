@@ -1,0 +1,74 @@
+{
+  "errors": [],
+  "generated_at": "2025-11-19T11:37:59Z",
+  "metrics": {
+    "./tests/test_samples/new_cwe.py": {
+      "CONFIDENCE.HIGH": 2,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 2,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 144,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "_totals": {
+      "CONFIDENCE.HIGH": 2,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 2,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 144,
+      "nosec": 0,
+      "skipped_tests": 0
+    }
+  },
+  "results": [
+    {
+      "code": "104     \"\"\"\n105     md5 = hashlib.md5(password.encode()).hexdigest()   # CWE-327 \u7bc4\u4f8b\uff08\u7834\u640d/\u98a8\u96aa\u6f14\u7b97\u6cd5\uff09\n106     sha1 = hashlib.sha1(password.encode()).hexdigest() # \u540c\u70ba\u5f31\u96dc\u6e4a\u793a\u7bc4\n",
+      "col_offset": 10,
+      "end_col_offset": 40,
+      "filename": "./tests/test_samples/new_cwe.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 327,
+        "link": "https://cwe.mitre.org/data/definitions/327.html"
+      },
+      "issue_severity": "HIGH",
+      "issue_text": "Use of weak MD5 hash for security. Consider usedforsecurity=False",
+      "line_number": 105,
+      "line_range": [
+        105
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.1/plugins/b324_hashlib.html",
+      "test_id": "B324",
+      "test_name": "hashlib"
+    },
+    {
+      "code": "105     md5 = hashlib.md5(password.encode()).hexdigest()   # CWE-327 \u7bc4\u4f8b\uff08\u7834\u640d/\u98a8\u96aa\u6f14\u7b97\u6cd5\uff09\n106     sha1 = hashlib.sha1(password.encode()).hexdigest() # \u540c\u70ba\u5f31\u96dc\u6e4a\u793a\u7bc4\n107     return md5, sha1\n",
+      "col_offset": 11,
+      "end_col_offset": 42,
+      "filename": "./tests/test_samples/new_cwe.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 327,
+        "link": "https://cwe.mitre.org/data/definitions/327.html"
+      },
+      "issue_severity": "HIGH",
+      "issue_text": "Use of weak SHA1 hash for security. Consider usedforsecurity=False",
+      "line_number": 106,
+      "line_range": [
+        106
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.1/plugins/b324_hashlib.html",
+      "test_id": "B324",
+      "test_name": "hashlib"
+    }
+  ]
+}

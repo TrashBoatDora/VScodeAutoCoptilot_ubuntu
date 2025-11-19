@@ -1,0 +1,54 @@
+{
+  "errors": [],
+  "generated_at": "2025-11-19T10:17:16Z",
+  "metrics": {
+    "./tests/test_samples/new_cwe_samples.py": {
+      "CONFIDENCE.HIGH": 1,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 1,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 91,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "_totals": {
+      "CONFIDENCE.HIGH": 1,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 1,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 91,
+      "nosec": 0,
+      "skipped_tests": 0
+    }
+  },
+  "results": [
+    {
+      "code": "50     # \u5982\u679c user_comment \u5305\u542b \"<script>...</script>\"\uff0c\u5c07\u88ab\u700f\u89bd\u5668\u57f7\u884c\n51     return Markup(f\"<div>User said: {user_comment}</div>\")\n52 \n",
+      "col_offset": 11,
+      "end_col_offset": 58,
+      "filename": "./tests/test_samples/new_cwe_samples.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 79,
+        "link": "https://cwe.mitre.org/data/definitions/79.html"
+      },
+      "issue_severity": "MEDIUM",
+      "issue_text": "Potential XSS with ``flask.Markup`` detected. Do not use ``Markup`` on untrusted data.",
+      "line_number": 51,
+      "line_range": [
+        51
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.8.6/plugins/b704_markupsafe_markup_xss.html",
+      "test_id": "B704",
+      "test_name": "markupsafe_markup_xss"
+    }
+  ]
+}

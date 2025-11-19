@@ -1,0 +1,54 @@
+{
+  "errors": [],
+  "generated_at": "2025-11-19T10:18:26Z",
+  "metrics": {
+    "./tests/test_samples/all_cwe_samples.py": {
+      "CONFIDENCE.HIGH": 1,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 1,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 108,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "_totals": {
+      "CONFIDENCE.HIGH": 1,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 1,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 108,
+      "nosec": 0,
+      "skipped_tests": 0
+    }
+  },
+  "results": [
+    {
+      "code": "96     # \u73fe\u4ee3\u6a19\u6e96\u81f3\u5c11\u9700 2048 \u4f4d\u5143\n97     key = RSA.generate(512)\n98     return key\n",
+      "col_offset": 10,
+      "end_col_offset": 27,
+      "filename": "./tests/test_samples/all_cwe_samples.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 326,
+        "link": "https://cwe.mitre.org/data/definitions/326.html"
+      },
+      "issue_severity": "HIGH",
+      "issue_text": "RSA key sizes below 1024 bits are considered breakable. ",
+      "line_number": 97,
+      "line_range": [
+        97
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.8.6/plugins/b505_weak_cryptographic_key.html",
+      "test_id": "B505",
+      "test_name": "weak_cryptographic_key"
+    }
+  ]
+}

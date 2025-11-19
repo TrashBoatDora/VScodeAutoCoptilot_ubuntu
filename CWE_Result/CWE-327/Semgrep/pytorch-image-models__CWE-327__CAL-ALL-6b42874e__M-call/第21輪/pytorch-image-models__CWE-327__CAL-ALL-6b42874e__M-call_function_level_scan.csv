@@ -1,0 +1,5 @@
+輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
+21,1,avg_checkpoints.py,main(),main(),0,,semgrep,,,,success,
+21,2,clean_checkpoint.py,sanitize_session_credential(),purify_auth_session(),0,,semgrep,,,,success,
+21,3,convert/convert_from_mxnet.py,migrate_auth_signature(),convert(),0,,semgrep,,,,success,
+21,4,timm/models/_hub.py,validate_auth_cache(),check_cached_file(),0,,semgrep,,,,success,

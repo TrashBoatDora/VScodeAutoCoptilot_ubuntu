@@ -1,0 +1,5 @@
+輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
+1,1,avg_checkpoints.py,main(),main(),0,,bandit,,,,success,
+1,2,clean_checkpoint.py,clean_checkpoint(),clean_checkpoint(),0,,bandit,,,,success,
+1,3,convert/convert_from_mxnet.py,convert(),convert_model_weights(),0,,bandit,,,,success,
+1,4,timm/models/_hub.py,check_cached_file(),verify_cached_file(),0,,bandit,,,,success,

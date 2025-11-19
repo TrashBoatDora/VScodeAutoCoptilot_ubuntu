@@ -59,38 +59,42 @@ class CWEDetector:
     
     # Bandit 規則映射（完整的 CWE 支援）
     BANDIT_BY_CWE = {
-        "022": "B202",  # Path Traversal
+        "022": "B202",  # Path Traversal (tarfile)
         "078": "B102,B601,B602,B603,B604,B605,B606,B607,B609",  # OS Command Injection
-        "079": "B704",  # XSS
-        "095": "B307",  # Code Injection (eval, exec, yaml)
-        "113": "B201",  # HTTP Response Splitting
+        "079": "B701,B702,B703,B704",  # XSS (Jinja2, Mako, Django, MarkupSafe)
+        "095": "B102,B307",  # Code Injection (exec, eval)
+        "113": "",  # HTTP Response Splitting (Bandit 不支援)
         "326": "B505",  # Weak Encryption
-        "327": "B324,B502,B503,B504",  # Broken Cryptography
-        "377": "B108",  # Insecure Temporary File
-        "502": "B301,B302,B303,B304,B305,B306,B506",  # Deserialization
-        "643": "B320",  # XPath Injection
-        "760": "B303",  # Predictable Salt
-        "918": "B310,B411,B413",  # SSRF
-        "943": "B608",  # SQL Injection
+        "327": "B304,B305,B324,B413,B502,B503,B504,B508,B509",  # Broken Cryptography (MD5, ciphers, ssl, pycrypto, snmp)
+        "377": "B108,B306",  # Insecure Temporary File (tmp paths, mktemp)
+        "502": "B301,B302,B403,B506,B614",  # Deserialization (Pickle, Marshal, YAML, PyTorch)
+        "643": "B313,B314,B315,B316,B317,B318,B319",  # XPath Injection (XML)
+        "760": "B324",  # Predictable Salt (MD5 usage as proxy)
+        "918": "B310",  # SSRF (urllib)
+        "943": "B608,B610,B611",  # SQL Injection (Hardcoded, Django)
     }
     
     # Semgrep 規則映射（對應 CWE 的 Semgrep 規則）
+    # 注意：所有規則必須使用 r/ 前綴（registry rules）或 p/ 前綴（rulesets）
+    # 規則已通過 validate_semgrep_rules.py 驗證（Python 專案）
     SEMGREP_BY_CWE = {
-        "022": "python.lang.security.audit.path-traversal",  # Path Traversal
-        "078": "python.lang.security.audit.dangerous-subprocess-use",  # OS Command Injection
-        "079": "python.lang.security.audit.xss",  # XSS
-        "095": "python.lang.security.audit.eval-detected,python.lang.security.audit.exec-detected",  # Code Injection
-        "113": "python.lang.security.audit.http-response-splitting",  # HTTP Response Splitting
-        "326": "python.lang.security.audit.weak-crypto",  # Weak Encryption
-        "327": "python.lang.security.audit.hashlib-insecure-functions,python.lang.security.audit.md5-used",  # Broken Cryptography       
-        "329": "python.lang.security.audit.insecure-cipher-mode",  # CBC without Random IV
-        "347": "r/javascript.jose.security.jwt-none-alg,python.lang.security.audit.jwt-unverified",
-        "377": "python.lang.security.audit.insecure-temp-file",  # Insecure Temporary File
-        "502": "python.lang.security.audit.unsafe-deserialization,python.lang.security.audit.pickle-used",  # Deserialization
-        "643": "python.lang.security.audit.xpath-injection",  # XPath Injection
-        "760": "python.lang.security.audit.hardcoded-salt",  # Predictable Salt
-        "918": "python.lang.security.audit.ssrf",  # SSRF
-        "943": "python.lang.security.audit.sql-injection",  # SQL Injection
+        "022": "config/semgrep_rules.yaml",  # Path Traversal
+        "078": "config/semgrep_rules.yaml",  # OS Command Injection
+        "079": "config/semgrep_rules.yaml,r/python.flask.security.audit.directly-returned-format-string.directly-returned-format-string,r/python.django.security.injection.raw-html-format.raw-html-format",  # XSS
+        "095": "config/semgrep_rules.yaml,r/python.lang.security.audit.eval-detected.eval-detected",  # Code Injection (eval)
+        "113": "config/semgrep_rules.yaml",  # HTTP Response Splitting
+        "117": "config/semgrep_rules.yaml",  # Log Injection
+        "326": "config/semgrep_rules.yaml,r/python.pycryptodome.security.insufficient-rsa-key-size.insufficient-rsa-key-size",  # Weak Encryption (RSA)
+        "327": "config/semgrep_rules.yaml,r/python.lang.security.insecure-hash-algorithms-md5.insecure-hash-algorithm-md5",  # Broken Cryptography (MD5)
+        "329": "config/semgrep_rules.yaml",  # Insecure Cipher Mode (ECB)
+        "347": "config/semgrep_rules.yaml",  # JWT None Algorithm
+        "377": "config/semgrep_rules.yaml",  # Insecure Temporary File
+        "502": "config/semgrep_rules.yaml,r/python.lang.security.deserialization.pickle.avoid-pickle",  # Deserialization (Pickle)
+        "643": "config/semgrep_rules.yaml",  # XPath Injection
+        "760": "config/semgrep_rules.yaml",  # Predictable Salt
+        "918": "config/semgrep_rules.yaml,r/python.flask.security.injection.ssrf-requests.ssrf-requests,r/python.django.security.injection.ssrf.ssrf-injection-requests.ssrf-injection-requests",  # SSRF
+        "943": "config/semgrep_rules.yaml",  # SQL Injection
+        "1333": "config/semgrep_rules.yaml",  # ReDoS
     }
     
     def __init__(self, output_dir: Path = None):
@@ -370,6 +374,9 @@ class CWEDetector:
             # 判斷是規則集 (p/) 還是具體規則 (r/)
             if rule.startswith('p/') or rule.startswith('r/'):
                 cmd.extend(["--config", rule])
+            elif rule.endswith('.yaml') or rule.endswith('.yml') or ':' in rule:
+                # 本地規則文件或指定規則 ID
+                cmd.extend(["--config", rule])
             else:
                 # 單個規則 ID，添加 r/ 前綴
                 cmd.extend(["--config", f"r/{rule}"])
@@ -471,6 +478,33 @@ class CWEDetector:
                     
                     # Semgrep 的嚴重性資訊在 metadata 中
                     metadata = extra.get("metadata", {})
+                    
+                    # 檢查 CWE 是否匹配（用於過濾共享配置檔案中的非目標 CWE）
+                    metadata_cwe = metadata.get("cwe", [])
+                    is_match = False
+                    
+                    # 如果沒有 metadata.cwe，假設匹配（可能是舊規則或未標記）
+                    if not metadata_cwe:
+                        is_match = True
+                    else:
+                        # 處理列表或字串
+                        cwe_list = metadata_cwe if isinstance(metadata_cwe, list) else [metadata_cwe]
+                        for cwe_item in cwe_list:
+                            # 處理 CWE ID 格式差異 (例如 079 vs 79)
+                            target_cwe = cwe
+                            target_cwe_no_zero = target_cwe.lstrip('0') if target_cwe.startswith('0') else target_cwe
+                            
+                            # 檢查是否包含請求的 CWE ID
+                            # 1. 完整匹配 "CWE-079"
+                            # 2. 去零匹配 "CWE-79"
+                            if (f"CWE-{target_cwe}" in cwe_item or 
+                                f"CWE-{target_cwe_no_zero}" in cwe_item or 
+                                cwe_item == target_cwe):
+                                is_match = True
+                                break
+                    
+                    if not is_match:
+                        continue
                     
                     # 使用 metadata.impact 作為嚴重性（更準確地表示安全影響）
                     impact = metadata.get("impact", "").upper()
@@ -729,6 +763,8 @@ class CWEDetector:
             # 添加規則
             for rule in rule_list:
                 if rule.startswith('p/') or rule.startswith('r/'):
+                    cmd.extend(["--config", rule])
+                elif rule.endswith('.yaml') or rule.endswith('.yml') or ':' in rule:
                     cmd.extend(["--config", rule])
                 else:
                     cmd.extend(["--config", f"r/{rule}"])

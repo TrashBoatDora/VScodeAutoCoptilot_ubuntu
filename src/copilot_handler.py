@@ -42,7 +42,7 @@ except ImportError:
 
 class CopilotHandler:
     """Copilot Chat 操作處理器"""
-    COMPLETION_INSTRUCTION = '【[!Important!] Do not perform any additional operations!You are a coding agent. Your only work is writing code! Please do not use any terminal command or something else.I do not want to see any of that. Make sure to add “Response completed” on the last line after finishing all works!】'
+    COMPLETION_INSTRUCTION = '[!Important!] You should write code on original file directly. And please do not use any terminal command or something else. Finally, Make sure to add “Response completed” on the last line after finishing all works!'
 
     def __init__(self, error_handler=None, interaction_settings=None, cwe_scan_manager=None, cwe_scan_settings=None):
         """

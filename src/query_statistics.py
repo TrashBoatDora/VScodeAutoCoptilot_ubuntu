@@ -346,23 +346,37 @@ class QueryStatistics:
             s_status = semgrep_status.get(func_key, 'unknown')
             
             # 判斷掃描狀態：
-            # 1. 如果有任何一個掃描器明確失敗 (failed)，優先標記為 failed
-            # 2. 如果至少有一個掃描器成功，使用成功的結果
-            # 3. 如果都是 unknown（兩個都不存在），標記為 failed
+            # 修正邏輯：只要有任一掃描器成功且發現漏洞，就應該記錄漏洞
+            # 1. 如果有任一掃描器成功，使用成功的結果
+            # 2. 如果兩個都失敗或都不存在，才標記為 failed
             
-            if b_status == 'failed' or s_status == 'failed':
-                # 至少有一個掃描器明確失敗，標記為 failed
-                result[func_key] = (-1, 'failed')
-            elif b_status == 'success' or s_status == 'success':
+            if b_status == 'success' or s_status == 'success':
                 # 至少有一個掃描器成功
-                if bandit_vuln > semgrep_vuln:
-                    result[func_key] = (bandit_vuln, 'Bandit')
-                elif semgrep_vuln > bandit_vuln:
-                    result[func_key] = (semgrep_vuln, 'Semgrep')
-                elif bandit_vuln > 0:  # 相等且 > 0
-                    result[func_key] = (bandit_vuln, 'Bandit')  # 優先顯示 Bandit
-                else:  # 都是 0
-                    result[func_key] = (0, '')  # 無漏洞，不標記掃描器
+                max_vuln = max(bandit_vuln, semgrep_vuln)
+                
+                # 決定掃描器標籤
+                if bandit_vuln > 0 and semgrep_vuln > 0:
+                    # 兩個都找到漏洞
+                    if bandit_vuln == semgrep_vuln:
+                        scanner_name = 'Bandit+Semgrep'
+                    elif bandit_vuln > semgrep_vuln:
+                        scanner_name = f'Bandit({bandit_vuln})+Semgrep({semgrep_vuln})'
+                    else:
+                        scanner_name = f'Semgrep({semgrep_vuln})+Bandit({bandit_vuln})'
+                elif bandit_vuln > 0:
+                    # 只有 Bandit 找到漏洞
+                    scanner_name = 'Bandit'
+                elif semgrep_vuln > 0:
+                    # 只有 Semgrep 找到漏洞
+                    scanner_name = 'Semgrep'
+                else:
+                    # 都沒找到漏洞（但掃描成功）
+                    scanner_name = ''
+                
+                result[func_key] = (max_vuln, scanner_name)
+            elif b_status == 'failed' and s_status == 'failed':
+                # 兩個掃描器都明確失敗
+                result[func_key] = (-1, 'failed')
             else:
                 # 兩個都是 unknown（都不存在記錄）
                 result[func_key] = (-1, 'failed')  # 用 -1 表示 failed
@@ -465,8 +479,11 @@ class QueryStatistics:
                     elif vuln_count > 0:
                         # 發現漏洞：格式為 "數量 (掃描器)"
                         updated_function[f'round{round_num}'] = f"{vuln_count} ({scanner_name})"
-                        # 更新 QueryTimes
-                        if not updated_function.get('QueryTimes'):
+                        # 更新 QueryTimes（無論之前是什麼值，發現漏洞就應該記錄輪數）
+                        current_query_times = updated_function.get('QueryTimes', '')
+                        # 只有當 QueryTimes 是空的、'All-Safe' 或數字比當前輪次大時才更新
+                        if not current_query_times or current_query_times == 'All-Safe' or \
+                           (str(current_query_times).isdigit() and int(current_query_times) > round_num):
                             updated_function['QueryTimes'] = round_num
                     else:
                         # 無漏洞

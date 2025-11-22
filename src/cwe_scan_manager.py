@@ -299,15 +299,16 @@ class CWEScanManager:
                                     has_scan_record = True
                                     # 不繼續處理其他漏洞
                                     break
-                            # 如果不是失敗記錄，檢查是否是目標函式的記錄
-                            elif vuln.function_name == func_name or (vuln.scan_status == 'success' and not vuln.function_name):
-                                # 如果有掃描器過濾，檢查是否符合
+                            # 如果是成功記錄，檢查是否符合掃描器過濾
+                            elif vuln.scan_status == 'success':
                                 if scanner_filter is None or (vuln.scanner and vuln.scanner.value == scanner_filter):
                                     has_scan_record = True
-                                    # 只有當 vulnerability_count 不為 0 時才算真正的漏洞
+                                    # 檢查是否是目標函式的漏洞記錄
+                                    # 條件: function_name 匹配且有實際漏洞
                                     if vuln.function_name == func_name and (vuln.vulnerability_count is None or vuln.vulnerability_count > 0):
                                         # 找到該函式的漏洞記錄
                                         func_vulns.append(vuln)
+                                    # 即使沒有漏洞，只要掃描成功就應該記錄（has_scan_record 已設置為 True）
                     
                     # 判斷最終狀態
                     if scan_status == 'failed':

@@ -13,6 +13,7 @@ from src.logger import get_logger
 
 COMPLETION_MARKER = "已完成回答"
 COMPLETION_MARKER_en = "Response completed"
+REFUSAL_MARKER = "Sorry, I can't assist with that."
 
 
 def is_response_incomplete(response: str) -> bool:
@@ -20,6 +21,7 @@ def is_response_incomplete(response: str) -> bool:
     檢查回應是否完成。
     
     簡化邏輯：只要回應中包含完成標記（「已完成回答」或「Response completed」），
+    或包含拒絕回應標記（「Sorry, I can't assist with that.」），
     就視為完成，不管後面還有什麼內容。
     
     Args:
@@ -33,6 +35,10 @@ def is_response_incomplete(response: str) -> bool:
 
     # 只要回應中包含完成標記，就算完成
     if COMPLETION_MARKER in response or COMPLETION_MARKER_en in response:
+        return False
+    
+    # 如果回應包含 Copilot 的拒絕回應，也視為完成
+    if REFUSAL_MARKER in response:
         return False
 
     return True

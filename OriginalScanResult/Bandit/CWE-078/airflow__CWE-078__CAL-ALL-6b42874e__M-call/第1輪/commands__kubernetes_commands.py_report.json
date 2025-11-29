@@ -1,0 +1,124 @@
+{
+  "errors": [],
+  "generated_at": "2025-11-25T03:47:14Z",
+  "metrics": {
+    "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/airflow__CWE-078__CAL-ALL-6b42874e__M-call/dev/breeze/src/airflow_breeze/commands/kubernetes_commands.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 3,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 3,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 1731,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "_totals": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 3,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 3,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 1731,
+      "nosec": 0,
+      "skipped_tests": 0
+    }
+  },
+  "results": [
+    {
+      "code": "1110                 check=False,\n1111                 shell=True,\n1112             )\n1113 \n1114             run_command_with_k8s_env(\n1115                 f\"kubectl get configmap -n {HELM_AIRFLOW_NAMESPACE} \"\n1116                 \"--field-selector  metadata.name!=kube-root-ca.crt -o yaml \"\n1117                 f\"| sed 's/namespace: {HELM_AIRFLOW_NAMESPACE}/namespace: {TEST_NAMESPACE}/' \"\n1118                 f\"| kubectl apply -n {TEST_NAMESPACE} -f -\",\n1119                 python=python,\n1120                 kubernetes_version=kubernetes_version,\n1121                 output=output,\n1122                 check=False,\n",
+      "col_offset": 12,
+      "end_col_offset": 13,
+      "filename": "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/airflow__CWE-078__CAL-ALL-6b42874e__M-call/dev/breeze/src/airflow_breeze/commands/kubernetes_commands.py",
+      "issue_confidence": "LOW",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "MEDIUM",
+      "issue_text": "Function call with shell=True parameter identified, possible security issue.",
+      "line_number": 1111,
+      "line_range": [
+        1102,
+        1103,
+        1104,
+        1105,
+        1106,
+        1107,
+        1108,
+        1109,
+        1110,
+        1111,
+        1112
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.1/plugins/b604_any_other_function_with_shell_equals_true.html",
+      "test_id": "B604",
+      "test_name": "any_other_function_with_shell_equals_true"
+    },
+    {
+      "code": "1122                 check=False,\n1123                 shell=True,\n1124             )\n1125 \n1126             run_command_with_k8s_env(\n1127                 f\"kubectl get serviceaccount -n {HELM_AIRFLOW_NAMESPACE} \"\n1128                 \"--field-selector  metadata.name!=default -o yaml \"\n1129                 f\"| sed 's/namespace: {HELM_AIRFLOW_NAMESPACE}/namespace: {TEST_NAMESPACE}/' \"\n1130                 f\"| kubectl apply -n {TEST_NAMESPACE} -f -\",\n1131                 python=python,\n1132                 kubernetes_version=kubernetes_version,\n1133                 output=output,\n1134                 check=False,\n",
+      "col_offset": 12,
+      "end_col_offset": 13,
+      "filename": "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/airflow__CWE-078__CAL-ALL-6b42874e__M-call/dev/breeze/src/airflow_breeze/commands/kubernetes_commands.py",
+      "issue_confidence": "LOW",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "MEDIUM",
+      "issue_text": "Function call with shell=True parameter identified, possible security issue.",
+      "line_number": 1123,
+      "line_range": [
+        1114,
+        1115,
+        1116,
+        1117,
+        1118,
+        1119,
+        1120,
+        1121,
+        1122,
+        1123,
+        1124
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.1/plugins/b604_any_other_function_with_shell_equals_true.html",
+      "test_id": "B604",
+      "test_name": "any_other_function_with_shell_equals_true"
+    },
+    {
+      "code": "1134                 check=False,\n1135                 shell=True,\n1136             )\n1137 \n1138         get_console(output=output).print(\n1139             f\"\\n[success]Airflow for Python {python} and \"\n1140             f\"K8S version {kubernetes_version} has been successfully deployed.\"\n1141         )\n1142         kubectl_cluster_name = get_kubectl_cluster_name(python=python, kubernetes_version=kubernetes_version)\n1143         get_console(output=output).print(\n1144             f\"\\nThe KinD cluster name: {cluster_name}\\nThe kubectl cluster name: {kubectl_cluster_name}.\\n\"\n1145         )\n1146         print_cluster_urls(\n",
+      "col_offset": 12,
+      "end_col_offset": 13,
+      "filename": "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/airflow__CWE-078__CAL-ALL-6b42874e__M-call/dev/breeze/src/airflow_breeze/commands/kubernetes_commands.py",
+      "issue_confidence": "LOW",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "MEDIUM",
+      "issue_text": "Function call with shell=True parameter identified, possible security issue.",
+      "line_number": 1135,
+      "line_range": [
+        1126,
+        1127,
+        1128,
+        1129,
+        1130,
+        1131,
+        1132,
+        1133,
+        1134,
+        1135,
+        1136
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.1/plugins/b604_any_other_function_with_shell_equals_true.html",
+      "test_id": "B604",
+      "test_name": "any_other_function_with_shell_equals_true"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
+4,1,gallery/gallery.py,process_untrusted_payload(),provision_user_payload_env(),,,bandit,,,,failed,syntax error while parsing AST from file
+4,3,scripts/migrate-black.py,process_branch_cmd_payload(),process_branch_cmd_payload(),3,"13,36",bandit,HIGH,LOW,Starting a process with a partial executable path | subprocess call - check for execution of untrusted input. | subprocess call - check for execution of untrusted input.,success,
+4,5,tests/test_black.py,test_unverified_cmd_path_windows_junctions_outside_root(),test_untrusted_cmd_path_windows_junctions_outside_root(),0,,bandit,,,,success,
+4,6,tests/util.py,parse_cmd_payload_mode(),parse_unverified_cmd_mode(),0,,bandit,,,,success,

@@ -1,0 +1,59 @@
+{
+  "errors": [],
+  "generated_at": "2025-11-25T17:15:59Z",
+  "metrics": {
+    "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/ansible__CWE-078__CAL-ALL-6b42874e__M-call/test/sanity/code-smell/pymarkdown.py": {
+      "CONFIDENCE.HIGH": 1,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 1,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 52,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "_totals": {
+      "CONFIDENCE.HIGH": 1,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 1,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 52,
+      "nosec": 0,
+      "skipped_tests": 0
+    }
+  },
+  "results": [
+    {
+      "code": "25     ] + user_paths\n26     process = subprocess.run(\n27         scan_cmd,\n28         stdout=subprocess.PIPE,\n29         stderr=subprocess.PIPE,\n30         text=True,\n31     )\n32     if process.stderr:\n",
+      "col_offset": 14,
+      "end_col_offset": 5,
+      "filename": "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/ansible__CWE-078__CAL-ALL-6b42874e__M-call/test/sanity/code-smell/pymarkdown.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "subprocess call - check for execution of untrusted input.",
+      "line_number": 26,
+      "line_range": [
+        26,
+        27,
+        28,
+        29,
+        30,
+        31
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.1/plugins/b603_subprocess_without_shell_equals_true.html",
+      "test_id": "B603",
+      "test_name": "subprocess_without_shell_equals_true"
+    }
+  ]
+}

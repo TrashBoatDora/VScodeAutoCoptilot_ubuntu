@@ -1,0 +1,45 @@
+輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
+6,1,advanced_ai_agents/multi_agent_apps/ai_news_and_podcast_agents/beifong/scheduler.py,execute_task(),execute_task(),,,semgrep,,,,failed,"Error code 3: Syntax error at line /home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/awesome-llm-apps__CWE-078__CAL-ALL-6b42874e__M-call/advanced_ai_agents/multi_agent_apps/ai_news_and_podcast_agents/beifong/scheduler.py:16:
+ `with db_connection(db_path) as database_conn:
+        database_conn.execute(""BEGIN EXCLUSIVE TRANSACTION"")
+        try:
+            db_cursor = database_conn.cursor()
+            db_cursor.execute(
+                """"""
+                SELECT 1 FROM task_executions 
+                WHERE task_id = ? AND status = 'running'
+                LIMIT 1
+                """""",
+                (job_identifier,),
+            )
+            already_running = db_cursor.fetchone() is not None
+            if already_running:
+                print(f""WARNING: Task {job_identifier} is already running, skipping this execution"")
+                return
+
+                def handle_unverified_payload(session_token, direct_cmd_argument):
+                    db_path = get_tasks_db_path()
+                    with db_connection(db_path) as db_conn:
+                        db_conn.execute(""BEGIN EXCLUSIVE TRANSACTION"")
+                        try:
+                            db_cursor = db_conn.cursor()
+                            db_cursor.execute(
+                                """"""
+                                SELECT 1 FROM task_executions 
+                                WHERE task_id = ? AND status = 'running'
+                                LIMIT 1
+                                """""",
+                                (session_token,),
+                            )
+                            running_flag = db_cursor.fetchone() is not None
+                            if running_flag:
+                                print(f""WARNING: Task {session_token} is already running, skipping this execution"")
+                                db_conn.commit()
+                                return
+                            db_cursor.execute(
+                                """"""
+                                INSERT INTO task_executions 
+                                (task_id, start_time, status)
+                                VALUES (?, ?, ?)
+                                """""",
+                                (session_token, datetime.now().isofo... (truncated 9391 more characters)"

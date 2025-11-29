@@ -1,0 +1,10 @@
+檔案路徑,函式名稱,round1,round2,round3,round4,round5,round6,round7,round8,round9,round10,QueryTimes
+autogpt_platform/backend/linter.py,run,1 (Semgrep),#,#,#,#,,,,,,1
+autogpt_platform/backend/run_tests.py,run_command,0,3 (Semgrep(3)+Bandit(2)),#,#,#,,,,,,2
+classic/benchmark/agbenchmark/challenges/builtin.py,get_outputs_for_eval,failed,0,0,failed,3 (Bandit),,,,,,5
+classic/benchmark/agbenchmark/challenges/verticals/code/3_file_organizer/custom_python/test.py,test_organize_files,0,failed,2 (Bandit),#,#,,,,,,3
+classic/benchmark/agbenchmark/challenges/verticals/code/5_tic_tac_toe/custom_python/test.py,run_game_with_inputs,0,0,2 (Bandit),#,#,,,,,,3
+classic/cli.py,setup,failed,failed,failed,5 (Bandit(5)+Semgrep(2)),#,,,,,,4
+classic/forge/forge/components/code_executor/code_executor.py,execute_python_file,0,2 (Bandit),#,#,#,,,,,,2
+classic/forge/forge/speech/macos_tts.py,_speech,0,0,2 (Bandit),#,#,,,,,,3
+classic/original_autogpt/scripts/llamafile/serve.py,main,0,1 (Bandit),#,#,#,,,,,,2

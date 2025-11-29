@@ -1,0 +1,33 @@
+{
+  "errors": [],
+  "generated_at": "2025-11-25T07:14:51Z",
+  "metrics": {
+    "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/airflow__CWE-078__CAL-ALL-6b42874e__M-call/providers/google/src/airflow/providers/google/cloud/operators/cloud_composer.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 775,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "_totals": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 775,
+      "nosec": 0,
+      "skipped_tests": 0
+    }
+  },
+  "results": []
+}

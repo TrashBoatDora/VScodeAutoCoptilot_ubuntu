@@ -1,0 +1,98 @@
+輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
+1,1,airflow-core/hatch_build.py,build_standard(),compile_ui_assets(),1,67,bandit,HIGH,LOW,subprocess call - check for execution of untrusted input.,success,
+1,2,airflow-core/src/airflow/cli/commands/api_server_command.py,api_server(),api_server(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,3,airflow-core/src/airflow/cli/commands/dag_command.py,_display_dot_via_imgcat(),display_png_via_imgcat(),0,,bandit,,,,success,
+1,4,airflow-core/src/airflow/cli/commands/info_command.py,_get_version(),get_tool_version(),1,200,bandit,HIGH,LOW,subprocess call - check for execution of untrusted input.,success,
+1,5,airflow-core/src/airflow/cli/commands/standalone_command.py,run(),start_standalone(),0,,bandit,,,,success,
+1,6,airflow-core/src/airflow/configuration.py,run_command(),execute_shell_command(),1,134,bandit,HIGH,HIGH,"subprocess call with shell=True identified, security issue.",success,
+1,7,airflow-core/src/airflow/example_dags/example_kubernetes_executor.py,test_sharedvolume_mount(),check_sharedvolume_mount(),0,,bandit,,,,success,
+1,8,airflow-core/src/airflow/security/kerberos.py,genexpr(),genexpr(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,9,airflow-core/src/airflow/utils/process_utils.py,execute_in_subprocess_with_kwargs(),run_subprocess_with_kwargs(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,10,airflow-core/tests/integration/otel/test_otel.py,setup_class(),configure_otel_test_class(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,11,airflow-core/tests/unit/charts/helm_template_generator.py,render_chart(),render_helm_chart(),0,,bandit,,,,success,
+1,12,airflow-core/tests/unit/cli/commands/test_connection_command.py,test_cli_connections_add_invalid_uri(),test_add_invalid_connection_uri(),0,,bandit,,,,success,
+1,13,airflow-core/tests/unit/cli/test_cli_parser.py,test_airflow_config_contains_providers(),test_airflow_config_contains_providers(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,14,airflow-core/tests/unit/core/test_impersonation_tests.py,create_airflow_home(),setup_airflow_home_directory(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,15,airflow-core/tests/unit/dags/test_on_kill.py,execute(),run_task(),0,,bandit,,,,success,
+1,16,airflow-core/tests/unit/security/test_kerberos.py,genexpr(),genexpr(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,17,airflow-core/tests/unit/utils/test_dot_renderer.py,test_render_task_group(),test_dot_renderer_task_group(),0,,bandit,,,,success,
+1,18,airflow-core/tests/unit/utils/test_process_utils.py,test_should_force_kill_process(),test_force_kill_child_process(),0,,bandit,,,,success,
+1,19,dev/airflow_perf/scheduler_dag_execution_timing.py,main(),measure_scheduler_overhead(),0,,bandit,,,,success,
+1,20,dev/assign_cherry_picked_prs_with_milestone.py,get_changes(),fetch_release_changes(),1,239,bandit,HIGH,LOW,subprocess call - check for execution of untrusted input.,success,
+1,21,dev/breeze/src/airflow_breeze/commands/ci_image_commands.py,run_build_ci_image(),build_ci_docker_image(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,22,dev/breeze/src/airflow_breeze/commands/developer_commands.py,listcomp(),listcomp(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,23,dev/breeze/src/airflow_breeze/commands/kubernetes_commands.py,_create_cluster(),create_kind_cluster(),3,"1111,1123,1135",bandit,LOW,MEDIUM,"Function call with shell=True parameter identified, possible security issue. | Function call with shell=True parameter identified, possible security issue. | Function call with shell=True parameter identified, possible security issue.",success,
+1,24,dev/breeze/src/airflow_breeze/commands/main_command.py,check_for_python_emulation(),validate_python_architecture(),0,,bandit,,,,success,
+1,25,dev/breeze/src/airflow_breeze/commands/release_management_commands.py,get_changes(),get_changes(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,26,dev/breeze/src/airflow_breeze/commands/setup_commands.py,autocomplete(),enable_shell_autocomplete(),0,,bandit,,,,success,
+1,27,dev/breeze/src/airflow_breeze/global_constants.py,_run_provider_dependencies_generation(),generate_provider_dependencies_file(),0,,bandit,,,,success,
+1,28,dev/breeze/src/airflow_breeze/utils/constraints_version_check.py,explain_package_upgrade(),describe_package_upgrade(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,29,dev/breeze/src/airflow_breeze/utils/gh_workflow_utils.py,make_sure_gh_is_installed(),ensure_gh_cli_installed(),1,72,bandit,HIGH,LOW,subprocess call - check for execution of untrusted input.,success,
+1,30,dev/breeze/src/airflow_breeze/utils/md5_build_check.py,calculate_md5_checksum_for_files(),compute_files_md5_checksum(),0,,bandit,,,,success,
+1,31,dev/breeze/src/airflow_breeze/utils/publish_docs_to_s3.py,sync_docs_to_s3(),sync_documentation_to_s3(),0,,bandit,,,,success,
+1,32,dev/breeze/src/airflow_breeze/utils/reinstall.py,reinstall_breeze(),reinstall_breeze_from_sources(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,33,dev/breeze/src/airflow_breeze/utils/run_utils.py,genexpr(),genexpr(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,34,dev/breeze/src/airflow_breeze/utils/workflow_status.py,workflow_status(),workflow_status(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,35,dev/retag_docker_images.py,pull_push_all_images(),copy_and_push_docker_images(),0,,bandit,,,,success,
+1,36,devel-common/src/docs/build_docs.py,is_command_available(),check_command_in_path(),0,,bandit,,,,success,
+1,37,devel-common/src/sphinx_exts/docs_build/docs_builder.py,build_sphinx_docs(),build_sphinx_documentation(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,38,devel-common/src/sphinx_exts/providers_commits.py,listcomp(),listcomp(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,39,devel-common/src/tests_common/pytest_plugin.py,_initialize_kerberos(),setup_kerberos_auth(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,40,devel-common/src/tests_common/test_utils/logging_command_executor.py,check_output(),get_command_output(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,41,devel-common/src/tests_common/test_utils/perf/perf_kit/python.py,pyspy(),profile_with_pyspy(),0,,bandit,,,,success,
+1,42,docker-tests/tests/docker_tests/command_utils.py,genexpr(),genexpr(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,43,helm-tests/tests/chart_utils/helm_template_generator.py,render_chart(),render_helm_chart(),0,,bandit,,,,success,
+1,44,kubernetes-tests/tests/kubernetes_tests/test_base.py,_delete_airflow_pod(),delete_airflow_pod_by_name(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,45,performance/src/performance_dags/performance_dag/performance_dag.py,listcomp(),listcomp(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,46,providers/amazon/src/airflow/providers/amazon/aws/executors/aws_lambda/docker/app.py,run_and_report(),execute_and_report_task(),1,69,bandit,HIGH,HIGH,"subprocess call with shell=True identified, security issue.",success,
+1,47,providers/amazon/src/airflow/providers/amazon/aws/operators/s3.py,execute(),create_s3_bucket_if_missing(),0,,bandit,,,,success,
+1,48,providers/amazon/tests/system/amazon/aws/example_emr_eks.py,run_eksctl_commands(),execute_eksctl_setup_commands(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,49,providers/amazon/tests/system/amazon/aws/example_sagemaker.py,_build_and_upload_docker_image(),build_and_push_docker_image(),0,,bandit,,,,success,
+1,50,providers/amazon/tests/unit/amazon/aws/transfers/test_s3_to_sftp.py,delete_remote_resource(),remove_remote_file_resource(),0,,bandit,,,,success,
+1,51,providers/amazon/tests/unit/amazon/aws/transfers/test_sftp_to_s3.py,test_sftp_to_s3_operation(),test_sftp_to_s3_transfer(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,52,providers/apache/beam/src/airflow/providers/apache/beam/hooks/beam.py,_beam_version(),_beam_version(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,53,providers/apache/hive/src/airflow/providers/apache/hive/hooks/hive.py,run_cli(),run_cli(),1,318,bandit,HIGH,LOW,subprocess call - check for execution of untrusted input.,success,
+1,54,providers/apache/pig/src/airflow/providers/apache/pig/hooks/pig.py,run_cli(),run_cli(),0,,bandit,,,,success,
+1,55,providers/apache/pinot/src/airflow/providers/apache/pinot/hooks/pinot.py,run_cli(),run_cli(),0,,bandit,,,,success,
+1,56,providers/apache/spark/src/airflow/providers/apache/spark/hooks/spark_sql.py,run_query(),run_query(),0,,bandit,,,,success,
+1,57,providers/apache/spark/src/airflow/providers/apache/spark/hooks/spark_submit.py,_start_driver_status_tracking(),_start_driver_status_tracking(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,58,providers/celery/src/airflow/providers/celery/executors/celery_executor_utils.py,_execute_in_subprocess(),_execute_in_subprocess(),1,250,bandit,HIGH,LOW,subprocess call - check for execution of untrusted input.,success,
+1,59,providers/cncf/kubernetes/src/airflow/providers/cncf/kubernetes/decorators/kubernetes.py,_generate_cmds(),_generate_cmds(),0,,bandit,,,,success,
+1,60,providers/cncf/kubernetes/src/airflow/providers/cncf/kubernetes/operators/pod.py,kill_istio_sidecar(),kill_istio_sidecar(),0,,bandit,,,,success,
+1,61,providers/cncf/kubernetes/tests/unit/cncf/kubernetes/test_template_rendering.py,test_get_k8s_pod_yaml(),test_get_k8s_pod_yaml(),0,,bandit,,,,success,
+1,62,providers/docker/src/airflow/providers/docker/operators/docker_swarm.py,format_args(),format_args(),0,,bandit,,,,success,
+1,63,providers/edge3/src/airflow/providers/edge3/cli/worker.py,_launch_job_af2_10(),_launch_job_af2_10(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,64,providers/edge3/src/airflow/providers/edge3/example_dags/integration_test.py,standard_tasks_group(),standard_tasks_group(),0,,bandit,,,,success,
+1,65,providers/edge3/src/airflow/providers/edge3/example_dags/win_notepad.py,execute(),execute(),0,,bandit,,,,success,
+1,66,providers/edge3/src/airflow/providers/edge3/example_dags/win_test.py,execute(),execute(),0,,bandit,,,,success,
+1,67,providers/google/src/airflow/providers/google/cloud/hooks/cloud_sql.py,_generate_login_token(),_generate_login_token(),1,1213,bandit,HIGH,LOW,subprocess call - check for execution of untrusted input.,success,
+1,68,providers/google/src/airflow/providers/google/cloud/hooks/compute_ssh.py,genexpr(),genexpr(),0,,bandit,,,,success,
+1,69,providers/google/src/airflow/providers/google/cloud/hooks/dataflow.py,_create_dataflow_job_with_gcloud(),_create_dataflow_job_with_gcloud(),1,1006,bandit,HIGH,LOW,subprocess call - check for execution of untrusted input.,success,
+1,70,providers/google/src/airflow/providers/google/cloud/hooks/dataproc.py,_create_dataproc_cluster_with_gcloud(),_create_dataproc_cluster_with_gcloud(),1,299,bandit,HIGH,LOW,subprocess call - check for execution of untrusted input.,success,
+1,71,providers/google/src/airflow/providers/google/cloud/operators/cloud_composer.py,_parse_cmd_to_args(),_parse_cmd_to_args(),0,,bandit,,,,success,
+1,72,providers/google/src/airflow/providers/google/cloud/operators/gcs.py,execute(),execute(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,73,providers/google/src/airflow/providers/google/common/hooks/base_google.py,provide_authorized_gcloud(),provide_authorized_gcloud(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,74,providers/google/tests/unit/google/cloud/hooks/test_dataflow.py,genexpr(),genexpr(),0,,bandit,,,,success,
+1,75,providers/google/tests/unit/google/cloud/utils/gcp_authenticator.py,gcp_restore_authentication(),gcp_restore_authentication(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,76,providers/openlineage/tests/unit/openlineage/extractors/test_bash.py,test_extract_operator_bash_command_disabled(),test_extract_operator_bash_command_disabled(),0,,bandit,,,,success,
+1,77,providers/openlineage/tests/unit/openlineage/plugins/test_adapter.py,test_emit_dag_complete_event(),test_emit_dag_complete_event(),0,,bandit,,,,success,
+1,78,providers/openlineage/tests/unit/openlineage/plugins/test_utils.py,test_does_not_include_full_task_info(),test_does_not_include_full_task_info(),0,,bandit,,,,success,
+1,79,providers/openlineage/tests/unit/openlineage/utils/test_utils.py,test_dag_info(),test_dag_info(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,80,providers/papermill/tests/system/papermill/conftest.py,remote_kernel(),remote_kernel(),2,40,bandit,HIGH,LOW,Starting a process with a partial executable path | subprocess call - check for execution of untrusted input.,success,
+1,81,providers/sftp/tests/unit/sftp/operators/test_sftp.py,test_file_transfer_with_intermediate_dir_put(),test_file_transfer_with_intermediate_dir_put(),0,,bandit,,,,success,
+1,82,providers/ssh/src/airflow/providers/ssh/hooks/ssh.py,exec_ssh_client_command(),exec_ssh_client_command(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,83,providers/ssh/tests/unit/ssh/hooks/test_ssh.py,test_ssh_connection(),test_ssh_connection(),1,483,bandit,MEDIUM,MEDIUM,"Possible shell injection via Paramiko call, check inputs are properly sanitized.",success,
+1,84,providers/ssh/tests/unit/ssh/operators/test_ssh.py,test_arg_checking(),test_arg_checking(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,85,providers/standard/src/airflow/providers/standard/example_dags/example_bash_decorator.py,get_file_stats(),get_file_stats(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,86,providers/standard/src/airflow/providers/standard/hooks/package_index.py,test_connection(),test_connection(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,87,providers/standard/src/airflow/providers/standard/hooks/subprocess.py,run_command(),run_command(),1,90,bandit,HIGH,LOW,subprocess call - check for execution of untrusted input.,success,
+1,88,providers/standard/src/airflow/providers/standard/operators/bash.py,execute(),execute(),0,,bandit,,,,success,
+1,89,providers/standard/src/airflow/providers/standard/operators/python.py,_get_airflow_version_from_target_env(),_get_airflow_version_from_target_env(),2,"114,1128",bandit,HIGH,LOW,subprocess call - check for execution of untrusted input. | subprocess call - check for execution of untrusted input.,success,
+1,90,providers/standard/src/airflow/providers/standard/sensors/bash.py,poke(),poke(),2,89,bandit,HIGH,LOW,Starting a process with a partial executable path | subprocess call - check for execution of untrusted input.,success,
+1,91,providers/standard/src/airflow/providers/standard/utils/python_virtualenv.py,_generate_uv_cmd(),_generate_uv_cmd(),0,,bandit,,,,success,
+1,92,providers/standard/tests/unit/standard/decorators/test_external_python.py,venv_python_with_cloudpickle_and_dill(),venv_python_with_cloudpickle_and_dill(),0,,bandit,,,,success,
+1,93,providers/teradata/src/airflow/providers/teradata/hooks/bteq.py,execute_bteq_script_at_local(),execute_bteq_script_at_local(),2,"244,271",bandit,HIGH;MEDIUM,HIGH;MEDIUM,"Possible shell injection via Paramiko call, check inputs are properly sanitized. | subprocess call with shell=True identified, security issue.",success,
+1,94,providers/teradata/src/airflow/providers/teradata/utils/bteq_util.py,identify_os(),identify_os(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,95,providers/teradata/src/airflow/providers/teradata/utils/encryption_utils.py,generate_encrypted_file_with_openssl(),generate_encrypted_file_with_openssl(),1,51,bandit,HIGH,LOW,subprocess call - check for execution of untrusted input.,success,
+1,96,scripts/ci/prek/breeze_cmd_line.py,is_regeneration_needed(),is_regeneration_needed(),6,"68,84,93",bandit,HIGH,LOW,Starting a process with a partial executable path | subprocess call - check for execution of untrusted input. | Starting a process with a partial executable path | subprocess call - check for execution of untrusted input. | Starting a process with a partial executable path | subprocess call - check for execution of untrusted input.,success,
+1,97,scripts/ci/prek/common_prek_utils.py,initialize_breeze_prek(),initialize_breeze_prek(),0,,bandit,,,,success,

@@ -1,0 +1,61 @@
+{
+  "errors": [],
+  "generated_at": "2025-11-25T04:47:41Z",
+  "metrics": {
+    "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/airflow__CWE-078__CAL-ALL-6b42874e__M-call/providers/standard/src/airflow/providers/standard/hooks/subprocess.py": {
+      "CONFIDENCE.HIGH": 1,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 1,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 81,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "_totals": {
+      "CONFIDENCE.HIGH": 1,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 1,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 81,
+      "nosec": 0,
+      "skipped_tests": 0
+    }
+  },
+  "results": [
+    {
+      "code": "89             import subprocess\n90             self.sub_process = subprocess.Popen(\n91                 command,\n92                 cwd=cwd,\n93                 env=env if env is not None else os.environ.copy(),\n94                 stdout=subprocess.PIPE,\n95                 stderr=subprocess.STDOUT,\n96                 preexec_fn=pre_exec,\n97             )\n98             self.log.info(\"Output:\")\n",
+      "col_offset": 31,
+      "end_col_offset": 13,
+      "filename": "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/airflow__CWE-078__CAL-ALL-6b42874e__M-call/providers/standard/src/airflow/providers/standard/hooks/subprocess.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "subprocess call - check for execution of untrusted input.",
+      "line_number": 90,
+      "line_range": [
+        90,
+        91,
+        92,
+        93,
+        94,
+        95,
+        96,
+        97
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.1/plugins/b603_subprocess_without_shell_equals_true.html",
+      "test_id": "B603",
+      "test_name": "subprocess_without_shell_equals_true"
+    }
+  ]
+}

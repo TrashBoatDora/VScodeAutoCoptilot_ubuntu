@@ -1,0 +1,7 @@
+檔案路徑,函式名稱,round1,round2,round3,round4,round5,round6,round7,round8,round9,round10,QueryTimes
+gallery/gallery.py,black_runner,failed,failed,failed,failed,failed,failed,failed,failed,failed,failed,All-Safe
+scripts/diff_shades_gha_helper.py,comment_body,1 (Bandit),#,#,#,#,#,#,#,#,#,1
+scripts/migrate-black.py,blackify,failed,failed,failed,3 (Bandit),#,#,#,#,#,#,4
+scripts/release.py,get_git_tags,2 (Bandit),#,#,#,#,#,#,#,#,#,1
+tests/test_black.py,test_normalize_path_ignore_windows_junctions_outside_of_root,0,0,0,0,2 (Bandit+Semgrep),#,#,#,#,#,5
+tests/util.py,parse_mode,0,0,0,0,0,0,0,0,0,0,All-Safe

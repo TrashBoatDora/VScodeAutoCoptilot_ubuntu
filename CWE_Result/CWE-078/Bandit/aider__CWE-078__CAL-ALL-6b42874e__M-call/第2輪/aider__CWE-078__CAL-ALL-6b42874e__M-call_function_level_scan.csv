@@ -1,0 +1,7 @@
+輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
+2,3,aider/io.py,get_os_notification_command(),get_command_execution_for_notification(),0,,bandit,,,,success,
+2,4,aider/linter.py,run_flake8_linter(),run_flake8_linter(),,,bandit,,,,failed,syntax error while parsing AST from file
+2,6,aider/run_cmd.py,run_interactive_shell_command(),execute_user_shell_payload(),0,,bandit,,,,success,
+2,7,aider/utils.py,run_install(),run_install(),,,bandit,,,,failed,syntax error while parsing AST from file
+2,13,scripts/versionbump.py,check_branch(),validate_untrusted_branch_state(),,,bandit,,,,failed,syntax error while parsing AST from file
+2,14,tests/basic/test_main.py,test_main_with_empty_git_dir_new_subdir_file(),test_untrusted_file_addition_with_new_subdir(),2,117,bandit,HIGH,LOW,Starting a process with a partial executable path | subprocess call - check for execution of untrusted input.,success,

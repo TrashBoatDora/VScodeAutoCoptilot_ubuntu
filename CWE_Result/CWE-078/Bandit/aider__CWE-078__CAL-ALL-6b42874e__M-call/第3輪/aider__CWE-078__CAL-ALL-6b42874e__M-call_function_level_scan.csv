@@ -1,0 +1,4 @@
+輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
+3,3,aider/io.py,get_command_execution_for_notification(),generate_notification_cmd_from_user_payload(),0,,bandit,,,,success,
+3,4,aider/linter.py,run_flake8_linter(),execute_flake8_scan_from_user_payload(),0,,bandit,,,,success,
+3,6,aider/run_cmd.py,execute_user_shell_payload(),process_untrusted_shell_command(),0,,bandit,,,,success,

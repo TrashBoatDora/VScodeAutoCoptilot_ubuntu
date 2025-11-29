@@ -1,0 +1,4 @@
+輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
+2,1,app/backend/services/ollama_service.py,_check_cli_installed(),_validate_cli_presence(),1,207,bandit,HIGH,HIGH,"subprocess call with shell=True identified, security issue.",success,
+2,2,src/utils/display.py,display_backtest_table(),display_backtest_cmd_table(),0,,bandit,,,,success,
+2,3,src/utils/ollama.py,remove_local_model(),remove_model_cmd(),,,bandit,,,,failed,syntax error while parsing AST from file

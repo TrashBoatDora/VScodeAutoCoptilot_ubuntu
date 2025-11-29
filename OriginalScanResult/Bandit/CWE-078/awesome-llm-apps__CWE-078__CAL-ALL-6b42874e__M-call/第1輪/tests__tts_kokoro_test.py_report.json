@@ -1,0 +1,134 @@
+{
+  "errors": [],
+  "generated_at": "2025-11-26T03:02:09Z",
+  "metrics": {
+    "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/awesome-llm-apps__CWE-078__CAL-ALL-6b42874e__M-call/advanced_ai_agents/multi_agent_apps/ai_news_and_podcast_agents/beifong/tests/tts_kokoro_test.py": {
+      "CONFIDENCE.HIGH": 5,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 5,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 51,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "_totals": {
+      "CONFIDENCE.HIGH": 5,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 5,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 51,
+      "nosec": 0,
+      "skipped_tests": 0
+    }
+  },
+  "results": [
+    {
+      "code": "20             # macOS: use afplay\n21             os.system(f'afplay \"{audio_file_path}\"')\n22         elif os_type == \"Linux\":\n",
+      "col_offset": 12,
+      "end_col_offset": 52,
+      "filename": "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/awesome-llm-apps__CWE-078__CAL-ALL-6b42874e__M-call/advanced_ai_agents/multi_agent_apps/ai_news_and_podcast_agents/beifong/tests/tts_kokoro_test.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "HIGH",
+      "issue_text": "Starting a process with a shell, possible injection detected, security issue.",
+      "line_number": 21,
+      "line_range": [
+        21
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.1/plugins/b605_start_process_with_a_shell.html",
+      "test_id": "B605",
+      "test_name": "start_process_with_a_shell"
+    },
+    {
+      "code": "23             # Linux: try aplay, paplay, or ffplay\n24             if os.system(f'aplay \"{audio_file_path}\"') != 0:\n25                 if os.system(f'paplay \"{audio_file_path}\"') != 0:\n",
+      "col_offset": 15,
+      "end_col_offset": 54,
+      "filename": "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/awesome-llm-apps__CWE-078__CAL-ALL-6b42874e__M-call/advanced_ai_agents/multi_agent_apps/ai_news_and_podcast_agents/beifong/tests/tts_kokoro_test.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "HIGH",
+      "issue_text": "Starting a process with a shell, possible injection detected, security issue.",
+      "line_number": 24,
+      "line_range": [
+        24
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.1/plugins/b605_start_process_with_a_shell.html",
+      "test_id": "B605",
+      "test_name": "start_process_with_a_shell"
+    },
+    {
+      "code": "24             if os.system(f'aplay \"{audio_file_path}\"') != 0:\n25                 if os.system(f'paplay \"{audio_file_path}\"') != 0:\n26                     if os.system(f'ffplay -nodisp -autoexit \"{audio_file_path}\"') != 0:\n",
+      "col_offset": 19,
+      "end_col_offset": 59,
+      "filename": "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/awesome-llm-apps__CWE-078__CAL-ALL-6b42874e__M-call/advanced_ai_agents/multi_agent_apps/ai_news_and_podcast_agents/beifong/tests/tts_kokoro_test.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "HIGH",
+      "issue_text": "Starting a process with a shell, possible injection detected, security issue.",
+      "line_number": 25,
+      "line_range": [
+        25
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.1/plugins/b605_start_process_with_a_shell.html",
+      "test_id": "B605",
+      "test_name": "start_process_with_a_shell"
+    },
+    {
+      "code": "25                 if os.system(f'paplay \"{audio_file_path}\"') != 0:\n26                     if os.system(f'ffplay -nodisp -autoexit \"{audio_file_path}\"') != 0:\n27                         print(f\"Audio saved to {audio_file_path} (no suitable player found)\")\n",
+      "col_offset": 23,
+      "end_col_offset": 81,
+      "filename": "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/awesome-llm-apps__CWE-078__CAL-ALL-6b42874e__M-call/advanced_ai_agents/multi_agent_apps/ai_news_and_podcast_agents/beifong/tests/tts_kokoro_test.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "HIGH",
+      "issue_text": "Starting a process with a shell, possible injection detected, security issue.",
+      "line_number": 26,
+      "line_range": [
+        26
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.1/plugins/b605_start_process_with_a_shell.html",
+      "test_id": "B605",
+      "test_name": "start_process_with_a_shell"
+    },
+    {
+      "code": "29             # Windows: use powershell\n30             os.system(f'powershell -c (New-Object Media.SoundPlayer \"{audio_file_path}\").PlaySync();')\n31         else:\n",
+      "col_offset": 12,
+      "end_col_offset": 102,
+      "filename": "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/awesome-llm-apps__CWE-078__CAL-ALL-6b42874e__M-call/advanced_ai_agents/multi_agent_apps/ai_news_and_podcast_agents/beifong/tests/tts_kokoro_test.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "HIGH",
+      "issue_text": "Starting a process with a shell, possible injection detected, security issue.",
+      "line_number": 30,
+      "line_range": [
+        30
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.1/plugins/b605_start_process_with_a_shell.html",
+      "test_id": "B605",
+      "test_name": "start_process_with_a_shell"
+    }
+  ]
+}

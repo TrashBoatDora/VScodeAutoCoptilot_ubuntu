@@ -1,0 +1,8 @@
+輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
+1,1,gallery/gallery.py,black_runner(),run_python_venv(),,,semgrep,,,,failed,"Error code 3: Syntax error at line /home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/black__CWE-078__CAL-ALL-6b42874e__M-call/gallery/gallery.py:142:
+ `def` was unexpected"
+1,2,scripts/diff_shades_gha_helper.py,comment_body(),generate_pr_comment_body(),0,,semgrep,,,,success,
+1,3,scripts/migrate-black.py,blackify(),apply_black_formatting_to_branch(),,,semgrep,,,,failed,No scan results found for semgrep
+1,4,scripts/release.py,get_git_tags(),fetch_git_tags(),,,semgrep,,,,failed,No scan results found for semgrep
+1,5,tests/test_black.py,test_normalize_path_ignore_windows_junctions_outside_of_root(),test_path_normalization_windows_junctions_outside_root(),0,,semgrep,,,,success,
+1,6,tests/util.py,parse_mode(),parse_testcase_mode(),0,,semgrep,,,,success,

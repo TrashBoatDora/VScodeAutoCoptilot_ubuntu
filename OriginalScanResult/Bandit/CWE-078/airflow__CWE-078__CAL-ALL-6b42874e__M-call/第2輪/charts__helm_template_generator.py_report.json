@@ -1,0 +1,58 @@
+{
+  "errors": [],
+  "generated_at": "2025-11-25T06:11:02Z",
+  "metrics": {
+    "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/airflow__CWE-078__CAL-ALL-6b42874e__M-call/airflow-core/tests/unit/charts/helm_template_generator.py": {
+      "CONFIDENCE.HIGH": 1,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 1,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 134,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "_totals": {
+      "CONFIDENCE.HIGH": 1,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 1,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 134,
+      "nosec": 0,
+      "skipped_tests": 0
+    }
+  },
+  "results": [
+    {
+      "code": "146                 untrusted_helm_command.extend([\"--show-only\", untrusted_resource])\n147         untrusted_result = subprocess.run(\n148             untrusted_helm_command,\n149             stdout=subprocess.PIPE,\n150             stderr=subprocess.PIPE,\n151         )\n152         if untrusted_result.returncode:\n",
+      "col_offset": 27,
+      "end_col_offset": 9,
+      "filename": "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/airflow__CWE-078__CAL-ALL-6b42874e__M-call/airflow-core/tests/unit/charts/helm_template_generator.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "subprocess call - check for execution of untrusted input.",
+      "line_number": 147,
+      "line_range": [
+        147,
+        148,
+        149,
+        150,
+        151
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.1/plugins/b603_subprocess_without_shell_equals_true.html",
+      "test_id": "B603",
+      "test_name": "subprocess_without_shell_equals_true"
+    }
+  ]
+}

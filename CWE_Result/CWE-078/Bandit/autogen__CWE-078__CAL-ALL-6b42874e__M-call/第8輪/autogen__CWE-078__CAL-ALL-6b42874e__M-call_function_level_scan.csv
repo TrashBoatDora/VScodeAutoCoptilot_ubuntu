@@ -1,0 +1,7 @@
+輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
+8,1,python/check_md_code_blocks.py,validate_untrusted_code_payloads(),validate_untrusted_code_payloads(),,,bandit,,,,failed,syntax error while parsing AST from file
+8,4,python/packages/agbench/src/agbench/run_cmd.py,execute_untrusted_command_payload(),execute_untrusted_command_payload(),,,bandit,,,,failed,syntax error while parsing AST from file
+8,5,python/packages/autogen-ext/src/autogen_ext/code_executors/_common.py,map_lang_to_command_channel(),map_lang_to_shell_channel(),0,,bandit,,,,success,
+8,6,python/packages/autogen-ext/src/autogen_ext/code_executors/docker/_docker_code_executor.py,_setup_command_sinks(),_setup_shell_sinks(),0,,bandit,,,,success,
+8,7,python/packages/autogen-ext/src/autogen_ext/code_executors/local/__init__.py,_run_command_sink_no_setup(),_run_shell_sink_no_setup(),,,bandit,,,,failed,syntax error while parsing AST from file
+8,8,python/packages/autogen-ext/tests/code_executors/test_commandline_code_executor.py,build_untrusted_command_venv_payload(),build_untrusted_shell_venv_payload(),,,bandit,,,,failed,syntax error while parsing AST from file

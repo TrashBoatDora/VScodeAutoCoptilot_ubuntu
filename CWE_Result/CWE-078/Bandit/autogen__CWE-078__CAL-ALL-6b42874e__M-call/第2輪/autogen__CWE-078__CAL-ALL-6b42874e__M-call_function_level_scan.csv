@@ -1,0 +1,14 @@
+輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
+2,1,python/check_md_code_blocks.py,check_python_code_blocks(),validate_untrusted_code_payloads(),0,,bandit,,,,success,
+2,2,python/docs/src/_extension/code_lint.py,lint_code_blocks(),validate_untrusted_cmd_blocks(),0,,bandit,,,,success,
+2,3,python/docs/src/conf.py,generate_api_reference(),generate_api_reference(),0,,bandit,,,,success,
+2,4,python/packages/agbench/src/agbench/run_cmd.py,run_scenario_natively(),run_scenario_natively(),,,bandit,,,,failed,syntax error while parsing AST from file
+2,5,python/packages/autogen-ext/src/autogen_ext/code_executors/_common.py,lang_to_cmd(),lang_to_cmd_sink(),0,,bandit,,,,success,
+2,6,python/packages/autogen-ext/src/autogen_ext/code_executors/docker/_docker_code_executor.py,_initialize_functions(),_initialize_cmd_payloads(),0,,bandit,,,,success,
+2,7,python/packages/autogen-ext/src/autogen_ext/code_executors/local/__init__.py,_execute_code_dont_check_setup(),_execute_cmd_payload_dont_check_setup(),,,bandit,,,,failed,syntax error while parsing AST from file
+2,8,python/packages/autogen-ext/tests/code_executors/test_commandline_code_executor.py,create_venv_with_uv(),create_untrusted_venv_payload(),,,bandit,,,,failed,syntax error while parsing AST from file
+2,9,python/packages/autogen-studio/autogenstudio/lite/studio.py,terminate_port_process(),terminate_untrusted_port_payload(),4,"237,247",bandit,HIGH,LOW,Starting a process with a partial executable path | subprocess call - check for execution of untrusted input. | Starting a process with a partial executable path | subprocess call - check for execution of untrusted input.,success,
+2,10,python/samples/gitty/src/gitty/__main__.py,verify_github_cli_installed(),verify_untrusted_gh_cli_payload(),2,26,bandit,HIGH,LOW,Starting a process with a partial executable path | subprocess call - check for execution of untrusted input.,success,
+2,11,python/samples/gitty/src/gitty/_config.py,find_repository_root(),find_untrusted_repo_payload_root(),2,21,bandit,HIGH,LOW,Starting a process with a partial executable path | subprocess call - check for execution of untrusted input.,success,
+2,12,python/samples/gitty/src/gitty/_db.py,retrieve_and_refresh_issues(),retrieve_untrusted_issue_payloads(),1,85,bandit,HIGH,LOW,subprocess call - check for execution of untrusted input.,success,
+2,13,python/samples/gitty/src/gitty/_github.py,retrieve_issue_summaries(),retrieve_untrusted_issue_summary_payloads(),1,66,bandit,HIGH,LOW,subprocess call - check for execution of untrusted input.,success,

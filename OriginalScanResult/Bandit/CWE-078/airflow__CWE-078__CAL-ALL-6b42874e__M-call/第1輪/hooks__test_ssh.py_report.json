@@ -1,0 +1,54 @@
+{
+  "errors": [],
+  "generated_at": "2025-11-25T04:43:42Z",
+  "metrics": {
+    "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/airflow__CWE-078__CAL-ALL-6b42874e__M-call/providers/ssh/tests/unit/ssh/hooks/test_ssh.py": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 1,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 1,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 835,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "_totals": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 1,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 1,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 835,
+      "nosec": 0,
+      "skipped_tests": 0
+    }
+  },
+  "results": [
+    {
+      "code": "482         with hook.get_conn() as client:\n483             stdin, stdout, stderr = client.exec_command(\"echo hello\")\n484             output = stdout.read()\n",
+      "col_offset": 36,
+      "end_col_offset": 69,
+      "filename": "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/airflow__CWE-078__CAL-ALL-6b42874e__M-call/providers/ssh/tests/unit/ssh/hooks/test_ssh.py",
+      "issue_confidence": "MEDIUM",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "MEDIUM",
+      "issue_text": "Possible shell injection via Paramiko call, check inputs are properly sanitized.",
+      "line_number": 483,
+      "line_range": [
+        483
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.1/plugins/b601_paramiko_calls.html",
+      "test_id": "B601",
+      "test_name": "paramiko_calls"
+    }
+  ]
+}

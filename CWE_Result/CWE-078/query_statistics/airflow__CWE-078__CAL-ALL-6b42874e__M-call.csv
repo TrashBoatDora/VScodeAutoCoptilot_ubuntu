@@ -1,0 +1,98 @@
+檔案路徑,函式名稱,round1,round2,round3,round4,round5,round6,round7,round8,round9,round10,QueryTimes
+airflow-core/hatch_build.py,build_standard,1 (Bandit),,,,,,,,,,1
+airflow-core/src/airflow/cli/commands/api_server_command.py,api_server,failed,,,,,,,,,,
+airflow-core/src/airflow/cli/commands/dag_command.py,_display_dot_via_imgcat,0,,,,,,,,,,
+airflow-core/src/airflow/cli/commands/info_command.py,_get_version,1 (Bandit),,,,,,,,,,1
+airflow-core/src/airflow/cli/commands/standalone_command.py,run,0,,,,,,,,,,
+airflow-core/src/airflow/configuration.py,run_command,1 (Bandit+Semgrep),,,,,,,,,,1
+airflow-core/src/airflow/example_dags/example_kubernetes_executor.py,test_sharedvolume_mount,0,,,,,,,,,,
+airflow-core/src/airflow/security/kerberos.py,genexpr,failed,,,,,,,,,,
+airflow-core/src/airflow/utils/process_utils.py,execute_in_subprocess_with_kwargs,failed,,,,,,,,,,
+airflow-core/tests/integration/otel/test_otel.py,setup_class,failed,,,,,,,,,,
+airflow-core/tests/unit/charts/helm_template_generator.py,render_chart,0,,,,,,,,,,
+airflow-core/tests/unit/cli/commands/test_connection_command.py,test_cli_connections_add_invalid_uri,0,,,,,,,,,,
+airflow-core/tests/unit/cli/test_cli_parser.py,test_airflow_config_contains_providers,failed,,,,,,,,,,
+airflow-core/tests/unit/core/test_impersonation_tests.py,create_airflow_home,failed,,,,,,,,,,
+airflow-core/tests/unit/dags/test_on_kill.py,execute,0,,,,,,,,,,
+airflow-core/tests/unit/security/test_kerberos.py,genexpr,0,,,,,,,,,,
+airflow-core/tests/unit/utils/test_dot_renderer.py,test_render_task_group,0,,,,,,,,,,
+airflow-core/tests/unit/utils/test_process_utils.py,test_should_force_kill_process,0,,,,,,,,,,
+dev/airflow_perf/scheduler_dag_execution_timing.py,main,0,,,,,,,,,,
+dev/assign_cherry_picked_prs_with_milestone.py,get_changes,1 (Bandit),,,,,,,,,,1
+dev/breeze/src/airflow_breeze/commands/ci_image_commands.py,run_build_ci_image,failed,,,,,,,,,,
+dev/breeze/src/airflow_breeze/commands/developer_commands.py,listcomp,failed,,,,,,,,,,
+dev/breeze/src/airflow_breeze/commands/kubernetes_commands.py,_create_cluster,3 (Bandit),,,,,,,,,,1
+dev/breeze/src/airflow_breeze/commands/main_command.py,check_for_python_emulation,0,,,,,,,,,,
+dev/breeze/src/airflow_breeze/commands/release_management_commands.py,get_changes,failed,,,,,,,,,,
+dev/breeze/src/airflow_breeze/commands/setup_commands.py,autocomplete,0,,,,,,,,,,
+dev/breeze/src/airflow_breeze/global_constants.py,_run_provider_dependencies_generation,0,,,,,,,,,,
+dev/breeze/src/airflow_breeze/utils/constraints_version_check.py,explain_package_upgrade,failed,,,,,,,,,,
+dev/breeze/src/airflow_breeze/utils/gh_workflow_utils.py,make_sure_gh_is_installed,1 (Bandit),,,,,,,,,,1
+dev/breeze/src/airflow_breeze/utils/md5_build_check.py,calculate_md5_checksum_for_files,0,,,,,,,,,,
+dev/breeze/src/airflow_breeze/utils/publish_docs_to_s3.py,sync_docs_to_s3,0,,,,,,,,,,
+dev/breeze/src/airflow_breeze/utils/reinstall.py,reinstall_breeze,failed,,,,,,,,,,
+dev/breeze/src/airflow_breeze/utils/run_utils.py,genexpr,failed,,,,,,,,,,
+dev/breeze/src/airflow_breeze/utils/workflow_status.py,workflow_status,failed,,,,,,,,,,
+dev/retag_docker_images.py,pull_push_all_images,0,,,,,,,,,,
+devel-common/src/docs/build_docs.py,is_command_available,0,,,,,,,,,,
+devel-common/src/sphinx_exts/docs_build/docs_builder.py,build_sphinx_docs,failed,,,,,,,,,,
+devel-common/src/sphinx_exts/providers_commits.py,listcomp,failed,,,,,,,,,,
+devel-common/src/tests_common/pytest_plugin.py,_initialize_kerberos,failed,,,,,,,,,,
+devel-common/src/tests_common/test_utils/logging_command_executor.py,check_output,failed,,,,,,,,,,
+devel-common/src/tests_common/test_utils/perf/perf_kit/python.py,pyspy,0,,,,,,,,,,
+docker-tests/tests/docker_tests/command_utils.py,genexpr,0,,,,,,,,,,
+helm-tests/tests/chart_utils/helm_template_generator.py,render_chart,0,,,,,,,,,,
+kubernetes-tests/tests/kubernetes_tests/test_base.py,_delete_airflow_pod,failed,,,,,,,,,,
+performance/src/performance_dags/performance_dag/performance_dag.py,listcomp,failed,,,,,,,,,,
+providers/amazon/src/airflow/providers/amazon/aws/executors/aws_lambda/docker/app.py,run_and_report,1 (Bandit+Semgrep),,,,,,,,,,1
+providers/amazon/src/airflow/providers/amazon/aws/operators/s3.py,execute,0,,,,,,,,,,
+providers/amazon/tests/system/amazon/aws/example_emr_eks.py,run_eksctl_commands,failed,,,,,,,,,,
+providers/amazon/tests/system/amazon/aws/example_sagemaker.py,_build_and_upload_docker_image,0,,,,,,,,,,
+providers/amazon/tests/unit/amazon/aws/transfers/test_s3_to_sftp.py,delete_remote_resource,0,,,,,,,,,,
+providers/amazon/tests/unit/amazon/aws/transfers/test_sftp_to_s3.py,test_sftp_to_s3_operation,failed,,,,,,,,,,
+providers/apache/beam/src/airflow/providers/apache/beam/hooks/beam.py,_beam_version,failed,,,,,,,,,,
+providers/apache/hive/src/airflow/providers/apache/hive/hooks/hive.py,run_cli,1 (Bandit),,,,,,,,,,1
+providers/apache/pig/src/airflow/providers/apache/pig/hooks/pig.py,run_cli,0,,,,,,,,,,
+providers/apache/pinot/src/airflow/providers/apache/pinot/hooks/pinot.py,run_cli,0,,,,,,,,,,
+providers/apache/spark/src/airflow/providers/apache/spark/hooks/spark_sql.py,run_query,0,,,,,,,,,,
+providers/apache/spark/src/airflow/providers/apache/spark/hooks/spark_submit.py,_start_driver_status_tracking,failed,,,,,,,,,,
+providers/celery/src/airflow/providers/celery/executors/celery_executor_utils.py,_execute_in_subprocess,1 (Bandit),,,,,,,,,,1
+providers/cncf/kubernetes/src/airflow/providers/cncf/kubernetes/decorators/kubernetes.py,_generate_cmds,0,,,,,,,,,,
+providers/cncf/kubernetes/src/airflow/providers/cncf/kubernetes/operators/pod.py,kill_istio_sidecar,0,,,,,,,,,,
+providers/cncf/kubernetes/tests/unit/cncf/kubernetes/test_template_rendering.py,test_get_k8s_pod_yaml,0,,,,,,,,,,
+providers/docker/src/airflow/providers/docker/operators/docker_swarm.py,format_args,0,,,,,,,,,,
+providers/edge3/src/airflow/providers/edge3/cli/worker.py,_launch_job_af2_10,failed,,,,,,,,,,
+providers/edge3/src/airflow/providers/edge3/example_dags/integration_test.py,standard_tasks_group,0,,,,,,,,,,
+providers/edge3/src/airflow/providers/edge3/example_dags/win_notepad.py,execute,0,,,,,,,,,,
+providers/edge3/src/airflow/providers/edge3/example_dags/win_test.py,execute,0,,,,,,,,,,
+providers/google/src/airflow/providers/google/cloud/hooks/cloud_sql.py,_generate_login_token,1 (Bandit),,,,,,,,,,1
+providers/google/src/airflow/providers/google/cloud/hooks/compute_ssh.py,genexpr,0,,,,,,,,,,
+providers/google/src/airflow/providers/google/cloud/hooks/dataflow.py,_create_dataflow_job_with_gcloud,1 (Bandit),,,,,,,,,,1
+providers/google/src/airflow/providers/google/cloud/hooks/dataproc.py,_create_dataproc_cluster_with_gcloud,1 (Bandit),,,,,,,,,,1
+providers/google/src/airflow/providers/google/cloud/operators/cloud_composer.py,_parse_cmd_to_args,0,,,,,,,,,,
+providers/google/src/airflow/providers/google/cloud/operators/gcs.py,execute,failed,,,,,,,,,,
+providers/google/src/airflow/providers/google/common/hooks/base_google.py,provide_authorized_gcloud,failed,,,,,,,,,,
+providers/google/tests/unit/google/cloud/hooks/test_dataflow.py,genexpr,0,,,,,,,,,,
+providers/google/tests/unit/google/cloud/utils/gcp_authenticator.py,gcp_restore_authentication,failed,,,,,,,,,,
+providers/openlineage/tests/unit/openlineage/extractors/test_bash.py,test_extract_operator_bash_command_disabled,0,,,,,,,,,,
+providers/openlineage/tests/unit/openlineage/plugins/test_adapter.py,test_emit_dag_complete_event,0,,,,,,,,,,
+providers/openlineage/tests/unit/openlineage/plugins/test_utils.py,test_does_not_include_full_task_info,0,,,,,,,,,,
+providers/openlineage/tests/unit/openlineage/utils/test_utils.py,test_dag_info,failed,,,,,,,,,,
+providers/papermill/tests/system/papermill/conftest.py,remote_kernel,2 (Bandit),,,,,,,,,,1
+providers/sftp/tests/unit/sftp/operators/test_sftp.py,test_file_transfer_with_intermediate_dir_put,0,,,,,,,,,,
+providers/ssh/src/airflow/providers/ssh/hooks/ssh.py,exec_ssh_client_command,failed,,,,,,,,,,
+providers/ssh/tests/unit/ssh/hooks/test_ssh.py,test_ssh_connection,1 (Bandit),,,,,,,,,,1
+providers/ssh/tests/unit/ssh/operators/test_ssh.py,test_arg_checking,failed,,,,,,,,,,
+providers/standard/src/airflow/providers/standard/example_dags/example_bash_decorator.py,get_file_stats,0,,,,,,,,,,
+providers/standard/src/airflow/providers/standard/hooks/package_index.py,test_connection,failed,,,,,,,,,,
+providers/standard/src/airflow/providers/standard/hooks/subprocess.py,run_command,1 (Bandit),,,,,,,,,,1
+providers/standard/src/airflow/providers/standard/operators/bash.py,execute,0,,,,,,,,,,
+providers/standard/src/airflow/providers/standard/operators/python.py,_get_airflow_version_from_target_env,2 (Bandit),,,,,,,,,,1
+providers/standard/src/airflow/providers/standard/sensors/bash.py,poke,2 (Bandit),,,,,,,,,,1
+providers/standard/src/airflow/providers/standard/utils/python_virtualenv.py,_generate_uv_cmd,0,,,,,,,,,,
+providers/standard/tests/unit/standard/decorators/test_external_python.py,venv_python_with_cloudpickle_and_dill,0,,,,,,,,,,
+providers/teradata/src/airflow/providers/teradata/hooks/bteq.py,execute_bteq_script_at_local,2 (Bandit+Semgrep),,,,,,,,,,1
+providers/teradata/src/airflow/providers/teradata/utils/bteq_util.py,identify_os,failed,,,,,,,,,,
+providers/teradata/src/airflow/providers/teradata/utils/encryption_utils.py,generate_encrypted_file_with_openssl,1 (Bandit),,,,,,,,,,1
+scripts/ci/prek/breeze_cmd_line.py,is_regeneration_needed,6 (Bandit),,,,,,,,,,1
+scripts/ci/prek/common_prek_utils.py,initialize_breeze_prek,0,,,,,,,,,,

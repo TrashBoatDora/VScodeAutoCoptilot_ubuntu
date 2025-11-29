@@ -1,0 +1,106 @@
+{
+  "errors": [],
+  "generated_at": "2025-11-26T02:45:19Z",
+  "metrics": {
+    "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/AutoGPT__CWE-078__CAL-ALL-6b42874e__M-call/classic/benchmark/agbenchmark/challenges/builtin.py": {
+      "CONFIDENCE.HIGH": 3,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 3,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 378,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "_totals": {
+      "CONFIDENCE.HIGH": 3,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 3,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 378,
+      "nosec": 0,
+      "skipped_tests": 0
+    }
+  },
+  "results": [
+    {
+      "code": "337                         # Try to execute the file as a Python script\n338                         result = subprocess.run(\n339                             [sys.executable, str(cmd_sink)],\n340                             capture_output=True,\n341                             text=True,\n342                         )\n343                         if \"error\" in result.stderr.lower() or result.returncode != 0:\n",
+      "col_offset": 33,
+      "end_col_offset": 25,
+      "filename": "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/AutoGPT__CWE-078__CAL-ALL-6b42874e__M-call/classic/benchmark/agbenchmark/challenges/builtin.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "subprocess call - check for execution of untrusted input.",
+      "line_number": 338,
+      "line_range": [
+        338,
+        339,
+        340,
+        341,
+        342
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.1/plugins/b603_subprocess_without_shell_equals_true.html",
+      "test_id": "B603",
+      "test_name": "subprocess_without_shell_equals_true"
+    },
+    {
+      "code": "348                         # Try to run pytest on the file\n349                         result = subprocess.run(\n350                             [\"pytest\", str(cmd_sink)],\n351                             capture_output=True,\n352                             text=True,\n353                         )\n354                         logger.debug(f\"EXIT CODE: {result.returncode}\")\n",
+      "col_offset": 33,
+      "end_col_offset": 25,
+      "filename": "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/AutoGPT__CWE-078__CAL-ALL-6b42874e__M-call/classic/benchmark/agbenchmark/challenges/builtin.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Starting a process with a partial executable path",
+      "line_number": 349,
+      "line_range": [
+        349,
+        350,
+        351,
+        352,
+        353
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.1/plugins/b607_start_process_with_partial_path.html",
+      "test_id": "B607",
+      "test_name": "start_process_with_partial_path"
+    },
+    {
+      "code": "348                         # Try to run pytest on the file\n349                         result = subprocess.run(\n350                             [\"pytest\", str(cmd_sink)],\n351                             capture_output=True,\n352                             text=True,\n353                         )\n354                         logger.debug(f\"EXIT CODE: {result.returncode}\")\n",
+      "col_offset": 33,
+      "end_col_offset": 25,
+      "filename": "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/AutoGPT__CWE-078__CAL-ALL-6b42874e__M-call/classic/benchmark/agbenchmark/challenges/builtin.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "subprocess call - check for execution of untrusted input.",
+      "line_number": 349,
+      "line_range": [
+        349,
+        350,
+        351,
+        352,
+        353
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.1/plugins/b603_subprocess_without_shell_equals_true.html",
+      "test_id": "B603",
+      "test_name": "subprocess_without_shell_equals_true"
+    }
+  ]
+}

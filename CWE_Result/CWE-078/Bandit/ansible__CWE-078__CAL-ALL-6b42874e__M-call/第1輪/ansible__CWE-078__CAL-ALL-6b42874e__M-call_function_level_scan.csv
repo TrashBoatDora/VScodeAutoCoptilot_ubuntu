@@ -1,0 +1,85 @@
+輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
+1,1,.azure-pipelines/scripts/publish-codecov.py,run(),run(),1,54,bandit,HIGH,LOW,subprocess call - check for execution of untrusted input.,success,
+1,2,hacking/azp/incidental.py,combine(),combine(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,3,hacking/create-bulk-issues.py,create(),create(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,4,hacking/report.py,query_database(),query_database(),0,,bandit,,,,success,
+1,5,hacking/test-module.py,ansiballz_setup(),ansiballz_setup(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,6,hacking/update-sanity-requirements.py,freeze_requirements(),freeze_requirements(),2,"49,53",bandit,HIGH,LOW,subprocess call - check for execution of untrusted input. | subprocess call - check for execution of untrusted input.,success,
+1,7,lib/ansible/_internal/_ssh/_agent_launch.py,_launch_ssh_agent(),_launch_ssh_agent(),1,45,bandit,HIGH,LOW,subprocess call - check for execution of untrusted input.,success,
+1,8,lib/ansible/cli/__init__.py,get_password_from_file(),get_password_from_file(),1,621,bandit,HIGH,LOW,subprocess call - check for execution of untrusted input.,success,
+1,9,lib/ansible/cli/config.py,_get_settings_vars(),_get_settings_vars(),0,,bandit,,,,success,
+1,10,lib/ansible/cli/pull.py,run(),run(),0,,bandit,,,,success,
+1,11,lib/ansible/executor/module_common.py,_extract_interpreter(),_extract_interpreter(),0,,bandit,,,,success,
+1,12,lib/ansible/executor/task_executor.py,start_connection(),start_connection(),1,1219,bandit,HIGH,LOW,subprocess call - check for execution of untrusted input.,success,
+1,13,lib/ansible/galaxy/collection/concrete_artifact_manager.py,_extract_collection_from_git(),_extract_collection_from_git(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,14,lib/ansible/galaxy/collection/gpg.py,run_gpg_verify(),run_gpg_verify(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,15,lib/ansible/module_utils/basic.py,_clean_args(),_clean_args(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,16,lib/ansible/module_utils/common/respawn.py,probe_interpreters_for_module(),probe_interpreters_for_module(),0,,bandit,,,,success,
+1,17,lib/ansible/module_utils/distro/_distro.py,_lsb_release_info(),_lsb_release_info(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,18,lib/ansible/module_utils/facts/system/cmdline.py,_parse_proc_cmdline(),_parse_proc_cmdline(),0,,bandit,,,,success,
+1,19,lib/ansible/module_utils/facts/system/pkg_mgr.py,_check_apt_flavor(),check_apt_package_type(),1,88,bandit,HIGH,LOW,subprocess call - check for execution of untrusted input.,success,
+1,20,lib/ansible/module_utils/service.py,daemonize(),run_command_as_daemon(),1,194,bandit,HIGH,LOW,subprocess call - check for execution of untrusted input.,success,
+1,21,lib/ansible/modules/apt.py,mark_installed(),set_package_install_status(),0,,bandit,,,,success,
+1,22,lib/ansible/modules/async_wrapper.py,_run_module(),execute_module_job(),0,,bandit,,,,success,
+1,23,lib/ansible/modules/command.py,main(),run_command_module(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,24,lib/ansible/modules/cron.py,_read_user_execute(),get_crontab_read_command(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,25,lib/ansible/modules/expect.py,main(),run_expect_module(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,26,lib/ansible/modules/git.py,get_submodule_update_params(),extract_submodule_update_options(),0,,bandit,,,,success,
+1,27,lib/ansible/modules/mount_facts.py,get_udevadm_device_uuid(),fetch_device_uuid_with_udevadm(),0,,bandit,,,,success,
+1,28,lib/ansible/modules/pip.py,_is_venv_command(),is_virtualenv_command(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,29,lib/ansible/modules/service.py,execute_command(),run_service_command(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,30,lib/ansible/modules/unarchive.py,is_unarchived(),check_if_unarchived(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,31,lib/ansible/modules/user.py,ssh_key_gen(),generate_ssh_keypair(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,32,lib/ansible/parsing/vault/__init__.py,_edit_file_helper(),edit_file_with_helper(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,33,lib/ansible/plugins/action/__init__.py,_execute_module(),execute_ansible_module(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,34,lib/ansible/plugins/action/script.py,run(),execute_script_action(),0,,bandit,,,,success,
+1,35,lib/ansible/plugins/become/__init__.py,_build_success_command(),build_success_marker_command(),0,,bandit,,,,success,
+1,36,lib/ansible/plugins/become/su.py,build_become_command(),construct_become_command(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,37,lib/ansible/plugins/become/sudo.py,build_become_command(),construct_become_command(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,38,lib/ansible/plugins/connection/__init__.py,_split_ssh_args(),split_ssh_arguments(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,40,lib/ansible/plugins/connection/psrp.py,exec_command(),execute_psrp_command(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,41,lib/ansible/plugins/connection/ssh.py,_bare_run(),_bare_run(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,42,lib/ansible/plugins/connection/winrm.py,_kerb_auth(),kerberos_authenticate(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,43,lib/ansible/plugins/filter/core.py,quote(),shell_quote(),0,,bandit,,,,success,
+1,44,lib/ansible/plugins/inventory/ini.py,_parse_host_definition(),parse_host_entry(),0,,bandit,,,,success,
+1,45,lib/ansible/plugins/inventory/script.py,run_command(),execute_inventory_script(),0,,bandit,,,,success,
+1,46,lib/ansible/plugins/lookup/lines.py,run(),get_lines(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,47,lib/ansible/plugins/lookup/pipe.py,run(),run_pipe_command(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,48,lib/ansible/plugins/shell/__init__.py,join(),join_command(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,49,lib/ansible/plugins/shell/powershell.py,build_module_command(),construct_module_command(),0,,bandit,,,,success,
+1,50,lib/ansible/utils/cmd_functions.py,run_cmd(),execute_command(),0,,bandit,,,,success,
+1,51,lib/ansible/utils/display.py,__init__(),__init__(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,52,lib/ansible/utils/galaxy.py,run_scm_cmd(),execute_scm_command(),0,,bandit,,,,success,
+1,53,lib/ansible/utils/ssh_functions.py,check_for_controlpersist(),has_controlpersist_support(),0,,bandit,,,,success,
+1,54,packaging/release.py,run(),run(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,55,test/integration/targets/ansible-galaxy-collection/library/setup_collections.py,sign_manifest(),sign_manifest(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,56,test/integration/targets/ansible-test-container/runme.py,__init__(),__init__(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,57,test/integration/targets/ansible-test-integration-targets/test.py,test_options(),test_options(),0,,bandit,,,,success,
+1,58,test/integration/targets/ansible-test-no-tty/ansible_collections/ns/col/vendored_pty.py,spawn(),execute_shell_command(),0,,bandit,,,,success,
+1,59,test/integration/targets/ansible-test/venv-pythons.py,main(),main(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,60,test/integration/targets/binary_modules/build.py,main(),build_binaries_for_targets(),0,,bandit,,,,success,
+1,61,test/integration/targets/builtin_vars_prompt/test-vars_prompt.py,run_test(),run_test(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,62,test/integration/targets/fork_safe_stdio/vendored_pty.py,spawn(),execute_shell_command(),0,,bandit,,,,success,
+1,63,test/integration/targets/prepare_http_tests/library/httptester_kinit.py,main(),main(),0,,bandit,,,,success,
+1,64,test/integration/targets/var_precedence/ansible-var-precedence-check.py,run_command(),execute_system_command(),0,,bandit,,,,success,
+1,65,test/lib/ansible_test/_internal/become.py,prepare_command(),build_privileged_command(),0,,bandit,,,,success,
+1,66,test/lib/ansible_test/_internal/connections.py,genexpr(),genexpr(),0,,bandit,,,,success,
+1,67,test/lib/ansible_test/_internal/host_profiles.py,build_init_command(),build_container_start_command(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,68,test/lib/ansible_test/_internal/processes.py,args(),command_arguments(),0,,bandit,,,,success,
+1,69,test/lib/ansible_test/_internal/ssh.py,run_ssh_command(),execute_remote_ssh_command(),0,,bandit,,,,success,
+1,70,test/lib/ansible_test/_internal/util.py,__init__(),__init__(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,71,test/lib/ansible_test/_internal/util_common.py,quote(),shell_quote(),0,,bandit,,,,success,
+1,72,test/lib/ansible_test/_util/controller/sanity/code-smell/changelog.py,main(),run_changelog_linter(),1,58,bandit,HIGH,LOW,subprocess call - check for execution of untrusted input.,success,
+1,73,test/lib/ansible_test/_util/controller/sanity/pylint/plugins/deprecated_comment.py,_deprecated_string_to_dict(),_deprecated_comment_to_dict(),0,,bandit,,,,success,
+1,74,test/lib/ansible_test/_util/controller/sanity/validate-modules/validate_modules/module_args.py,get_ps_argument_spec(),get_powershell_argument_spec(),1,132,bandit,HIGH,LOW,subprocess call - check for execution of untrusted input.,success,
+1,75,test/lib/ansible_test/_util/target/injector/python.py,main(),run_python_injector(),1,57,bandit,HIGH,LOW,subprocess call - check for execution of untrusted input.,success,
+1,76,test/lib/ansible_test/_util/target/sanity/import/importer.py,yaml_to_dict(),yaml_content_to_dict(),1,101,bandit,HIGH,LOW,subprocess call - check for execution of untrusted input.,success,
+1,77,test/lib/ansible_test/_util/target/setup/requirements.py,__init__(),__init__(),0,,bandit,,,,success,
+1,78,test/sanity/code-smell/black.py,black(),run_black_formatter(),1,61,bandit,HIGH,LOW,subprocess call - check for execution of untrusted input.,success,
+1,79,test/sanity/code-smell/mypy.py,test_context(),test_context(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,80,test/sanity/code-smell/package-data.py,build(),build(),1,110,bandit,HIGH,LOW,subprocess call - check for execution of untrusted input.,success,
+1,81,test/sanity/code-smell/pymarkdown.py,main(),run_markdown_scan(),1,26,bandit,HIGH,LOW,subprocess call - check for execution of untrusted input.,success,
+1,82,test/units/module_utils/_internal/_concurrent/test_futures.py,test_blocking_shutdown(),test_blocking_executor_shutdown(),1,35,bandit,HIGH,LOW,subprocess call - check for execution of untrusted input.,success,
+1,83,test/units/plugins/action/test_action.py,listcomp(),listcomp(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,84,test/units/plugins/connection/test_ssh.py,test_plugins_connection_ssh_fetch_file(),fetch_file_with_ssh_plugin(),,,bandit,,,,failed,syntax error while parsing AST from file
+1,85,test/units/utils/test_shlex.py,test_comments(),parse_shell_comments(),,,bandit,,,,failed,syntax error while parsing AST from file

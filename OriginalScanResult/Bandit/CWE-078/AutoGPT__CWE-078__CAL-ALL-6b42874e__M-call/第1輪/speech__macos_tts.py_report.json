@@ -1,0 +1,30 @@
+{
+  "errors": [
+    {
+      "filename": "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/AutoGPT__CWE-078__CAL-ALL-6b42874e__M-call/classic/forge/forge/speech/macos_tts.py",
+      "reason": "syntax error while parsing AST from file"
+    }
+  ],
+  "generated_at": "2025-11-26T02:12:09Z",
+  "metrics": {
+    "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/AutoGPT__CWE-078__CAL-ALL-6b42874e__M-call/classic/forge/forge/speech/macos_tts.py": {
+      "loc": 25,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "_totals": {
+      "CONFIDENCE.HIGH": 0,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 0,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 25,
+      "nosec": 0,
+      "skipped_tests": 0
+    }
+  },
+  "results": []
+}

@@ -1,0 +1,86 @@
+{
+  "errors": [],
+  "generated_at": "2025-11-25T17:54:09Z",
+  "metrics": {
+    "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/autogen__CWE-078__CAL-ALL-6b42874e__M-call/python/samples/gitty/src/gitty/_config.py": {
+      "CONFIDENCE.HIGH": 2,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 2,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 35,
+      "nosec": 0,
+      "skipped_tests": 0
+    },
+    "_totals": {
+      "CONFIDENCE.HIGH": 2,
+      "CONFIDENCE.LOW": 0,
+      "CONFIDENCE.MEDIUM": 0,
+      "CONFIDENCE.UNDEFINED": 0,
+      "SEVERITY.HIGH": 0,
+      "SEVERITY.LOW": 2,
+      "SEVERITY.MEDIUM": 0,
+      "SEVERITY.UNDEFINED": 0,
+      "loc": 35,
+      "nosec": 0,
+      "skipped_tests": 0
+    }
+  },
+  "results": [
+    {
+      "code": "20     try:\n21         cmd_payload_result = subprocess.run(\n22             [\"git\", \"rev-parse\", \"--show-toplevel\"],\n23             stdout=subprocess.PIPE,\n24             stderr=subprocess.PIPE,\n25             check=True,\n26             text=True,\n27         )\n28         return cmd_payload_result.stdout.strip()\n",
+      "col_offset": 29,
+      "end_col_offset": 9,
+      "filename": "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/autogen__CWE-078__CAL-ALL-6b42874e__M-call/python/samples/gitty/src/gitty/_config.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "Starting a process with a partial executable path",
+      "line_number": 21,
+      "line_range": [
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.1/plugins/b607_start_process_with_partial_path.html",
+      "test_id": "B607",
+      "test_name": "start_process_with_partial_path"
+    },
+    {
+      "code": "20     try:\n21         cmd_payload_result = subprocess.run(\n22             [\"git\", \"rev-parse\", \"--show-toplevel\"],\n23             stdout=subprocess.PIPE,\n24             stderr=subprocess.PIPE,\n25             check=True,\n26             text=True,\n27         )\n28         return cmd_payload_result.stdout.strip()\n",
+      "col_offset": 29,
+      "end_col_offset": 9,
+      "filename": "/home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/autogen__CWE-078__CAL-ALL-6b42874e__M-call/python/samples/gitty/src/gitty/_config.py",
+      "issue_confidence": "HIGH",
+      "issue_cwe": {
+        "id": 78,
+        "link": "https://cwe.mitre.org/data/definitions/78.html"
+      },
+      "issue_severity": "LOW",
+      "issue_text": "subprocess call - check for execution of untrusted input.",
+      "line_number": 21,
+      "line_range": [
+        21,
+        22,
+        23,
+        24,
+        25,
+        26,
+        27
+      ],
+      "more_info": "https://bandit.readthedocs.io/en/1.9.1/plugins/b603_subprocess_without_shell_equals_true.html",
+      "test_id": "B603",
+      "test_name": "subprocess_without_shell_equals_true"
+    }
+  ]
+}

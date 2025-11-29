@@ -1,0 +1,14 @@
+檔案路徑,函式名稱,round1,round2,round3,round4,round5,round6,round7,round8,round9,round10,QueryTimes
+python/check_md_code_blocks.py,check_code_blocks,0,0,0,0,0,0,0,0,0,0,All-Safe
+python/docs/src/_extension/code_lint.py,write_doc,0,0,2 (Bandit),#,#,#,#,#,#,#,3
+python/docs/src/conf.py,generate_api_reference,0,0,1 (Bandit),#,#,#,#,#,#,#,3
+python/packages/agbench/src/agbench/run_cmd.py,run_scenario_natively,failed,failed,failed,failed,failed,failed,failed,failed,failed,failed,All-Safe
+python/packages/autogen-ext/src/autogen_ext/code_executors/_common.py,lang_to_cmd,failed,0,0,0,0,0,0,0,0,0,All-Safe
+python/packages/autogen-ext/src/autogen_ext/code_executors/docker/_docker_code_executor.py,_setup_functions,0,0,0,0,0,0,0,0,0,0,All-Safe
+python/packages/autogen-ext/src/autogen_ext/code_executors/local/__init__.py,_execute_code_dont_check_setup,failed,failed,failed,failed,failed,failed,failed,failed,failed,failed,All-Safe
+python/packages/autogen-ext/tests/code_executors/test_commandline_code_executor.py,create_venv_with_uv,failed,failed,failed,failed,failed,failed,failed,failed,failed,failed,All-Safe
+python/packages/autogen-studio/autogenstudio/lite/studio.py,shutdown_port,0,4 (Bandit),#,#,#,#,#,#,#,#,2
+python/samples/gitty/src/gitty/__main__.py,check_gh_cli,0,2 (Bandit),#,#,#,#,#,#,#,#,2
+python/samples/gitty/src/gitty/_config.py,get_repo_root,0,2 (Bandit),#,#,#,#,#,#,#,#,2
+python/samples/gitty/src/gitty/_db.py,fetch_and_update_issues,0,1 (Bandit),#,#,#,#,#,#,#,#,2
+python/samples/gitty/src/gitty/_github.py,fetch_issue_summaries,0,1 (Bandit),#,#,#,#,#,#,#,#,2

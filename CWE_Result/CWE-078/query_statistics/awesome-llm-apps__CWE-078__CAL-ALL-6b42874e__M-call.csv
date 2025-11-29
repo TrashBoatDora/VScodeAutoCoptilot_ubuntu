@@ -1,0 +1,4 @@
+檔案路徑,函式名稱,round1,round2,round3,round4,round5,round6,round7,round8,round9,round10,QueryTimes
+advanced_ai_agents/multi_agent_apps/ai_news_and_podcast_agents/beifong/scheduler.py,execute_task,failed,failed,failed,failed,failed,failed,failed,failed,failed,failed,All-Safe
+advanced_ai_agents/multi_agent_apps/ai_news_and_podcast_agents/beifong/tests/tts_kokoro_test.py,play_audio,5 (Bandit+Semgrep),#,#,#,#,#,#,#,#,#,1
+advanced_ai_agents/single_agent_apps/windows_use_autonomous_agent/windows_use/desktop/__init__.py,execute_command,1 (Semgrep),#,#,#,#,#,#,#,#,#,1

@@ -1,0 +1,9 @@
+輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
+2,2,autogpt_platform/backend/run_tests.py,execute_shell_command(),execute_shell_command(),2,"57,81",bandit,HIGH,HIGH,"subprocess call with shell=True identified, security issue. | subprocess call with shell=True identified, security issue.",success,
+2,3,classic/benchmark/agbenchmark/challenges/builtin.py,collect_files_for_evaluation(),collect_files_for_evaluation(),0,,bandit,,,,success,
+2,4,classic/benchmark/agbenchmark/challenges/verticals/code/3_file_organizer/custom_python/test.py,verify_file_organization(),validate_user_file_organization(),,,bandit,,,,failed,syntax error while parsing AST from file
+2,5,classic/benchmark/agbenchmark/challenges/verticals/code/5_tic_tac_toe/custom_python/test.py,run_game_with_inputs(),execute_user_game_payloads(),0,,bandit,,,,success,
+2,6,classic/cli.py,install_dependencies(),install_user_supplied_dependencies(),,,bandit,,,,failed,syntax error while parsing AST from file
+2,7,classic/forge/forge/components/code_executor/code_executor.py,run_python_script(),run_python_script(),2,"202,211",bandit,HIGH,LOW,subprocess call - check for execution of untrusted input. | subprocess call - check for execution of untrusted input.,success,
+2,8,classic/forge/forge/speech/macos_tts.py,play_text(),play_user_payload(),0,,bandit,,,,success,
+2,9,classic/original_autogpt/scripts/llamafile/serve.py,run_llamafile_server(),run_user_llamafile_server(),1,145,bandit,HIGH,LOW,subprocess call - check for execution of untrusted input.,success,

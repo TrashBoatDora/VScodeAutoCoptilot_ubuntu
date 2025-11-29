@@ -1,0 +1,5 @@
+輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
+3,1,gallery/gallery.py,execute_user_payload(),process_untrusted_payload(),,,bandit,,,,failed,syntax error while parsing AST from file
+3,3,scripts/migrate-black.py,apply_black_formatting_to_branch(),process_branch_cmd_payload(),,,bandit,,,,failed,syntax error while parsing AST from file
+3,5,tests/test_black.py,test_untrusted_path_windows_junctions_outside_root(),test_unverified_cmd_path_windows_junctions_outside_root(),0,,bandit,,,,success,
+3,6,tests/util.py,parse_untrusted_mode(),parse_cmd_payload_mode(),0,,bandit,,,,success,

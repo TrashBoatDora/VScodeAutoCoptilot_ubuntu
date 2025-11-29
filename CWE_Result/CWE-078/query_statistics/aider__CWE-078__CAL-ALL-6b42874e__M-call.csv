@@ -1,0 +1,15 @@
+檔案路徑,函式名稱,round1,round2,round3,round4,round5,round6,round7,round8,round9,round10,QueryTimes
+aider/commands.py,cmd_git,1 (Bandit),#,,,,,,,,,1
+aider/editor.py,pipe_editor,1 (Bandit),#,,,,,,,,,1
+aider/io.py,get_default_notification_command,0,0,,,,,,,,,
+aider/linter.py,flake8_lint,failed,failed,,,,,,,,,
+aider/report.py,get_git_info,2 (Bandit),#,,,,,,,,,1
+aider/run_cmd.py,run_cmd_pexpect,0,0,,,,,,,,,
+aider/utils.py,run_install,failed,failed,,,,,,,,,
+benchmark/benchmark.py,get_versions,2 (Bandit),#,,,,,,,,,1
+benchmark/rungrid.py,run,1 (Bandit),#,,,,,,,,,1
+scripts/blame.py,run,1 (Bandit),#,,,,,,,,,1
+scripts/recording_audio.py,check_ffmpeg,2 (Bandit),#,,,,,,,,,1
+scripts/update-history.py,main,1 (Bandit),#,,,,,,,,,1
+scripts/versionbump.py,check_branch,0,0,,,,,,,,,
+tests/basic/test_main.py,test_main_with_empty_git_dir_new_subdir_file,failed,2 (Bandit),,,,,,,,,2

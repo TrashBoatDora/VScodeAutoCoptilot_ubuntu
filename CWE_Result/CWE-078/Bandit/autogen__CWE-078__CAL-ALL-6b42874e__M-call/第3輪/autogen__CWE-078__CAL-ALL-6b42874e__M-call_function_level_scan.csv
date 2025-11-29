@@ -1,0 +1,9 @@
+輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
+3,1,python/check_md_code_blocks.py,validate_untrusted_code_payloads(),validate_untrusted_code_payloads(),0,,bandit,,,,success,
+3,2,python/docs/src/_extension/code_lint.py,validate_untrusted_cmd_blocks(),audit_cmd_argument_blocks(),2,74,bandit,HIGH,LOW,Starting a process with a partial executable path | subprocess call - check for execution of untrusted input.,success,
+3,3,python/docs/src/conf.py,generate_api_reference(),generate_api_reference(),1,199,bandit,HIGH,LOW,subprocess call - check for execution of untrusted input.,success,
+3,4,python/packages/agbench/src/agbench/run_cmd.py,run_scenario_natively(),execute_untrusted_native_payload(),,,bandit,,,,failed,syntax error while parsing AST from file
+3,5,python/packages/autogen-ext/src/autogen_ext/code_executors/_common.py,lang_to_cmd_sink(),lang_to_cmd_channel(),0,,bandit,,,,success,
+3,6,python/packages/autogen-ext/src/autogen_ext/code_executors/docker/_docker_code_executor.py,_initialize_cmd_payloads(),_initialize_cmd_sinks(),0,,bandit,,,,success,
+3,7,python/packages/autogen-ext/src/autogen_ext/code_executors/local/__init__.py,_execute_cmd_payload_dont_check_setup(),_execute_cmd_sink_dont_check_setup(),,,bandit,,,,failed,syntax error while parsing AST from file
+3,8,python/packages/autogen-ext/tests/code_executors/test_commandline_code_executor.py,create_untrusted_venv_payload(),create_untrusted_venv_cmd_payload(),,,bandit,,,,failed,syntax error while parsing AST from file

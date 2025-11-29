@@ -1,0 +1,4 @@
+輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
+5,1,gallery/gallery.py,provision_user_payload_env(),setup_unverified_execution_env(),,,bandit,,,,failed,syntax error while parsing AST from file
+5,5,tests/test_black.py,test_untrusted_cmd_path_windows_junctions_outside_root(),test_unchecked_command_path_junctions_outside_root(),2,"1783,1785",bandit,HIGH,HIGH;LOW,"Starting a process with a partial executable path | subprocess call with shell=True identified, security issue.",success,
+5,6,tests/util.py,parse_unverified_cmd_mode(),parse_raw_command_mode(),0,,bandit,,,,success,

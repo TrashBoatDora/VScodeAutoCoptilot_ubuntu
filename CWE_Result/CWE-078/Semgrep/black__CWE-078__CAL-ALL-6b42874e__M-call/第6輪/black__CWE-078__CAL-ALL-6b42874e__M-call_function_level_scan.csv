@@ -1,0 +1,4 @@
+輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
+6,1,gallery/gallery.py,setup_unverified_execution_env(),provision_unverified_payload_env(),,,semgrep,,,,failed,"Error code 3: Syntax error at line /home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/black__CWE-078__CAL-ALL-6b42874e__M-call/gallery/gallery.py:142:
+ `def` was unexpected"
+6,6,tests/util.py,parse_raw_command_mode(),parse_untrusted_cmd_payload(),0,,semgrep,,,,success,

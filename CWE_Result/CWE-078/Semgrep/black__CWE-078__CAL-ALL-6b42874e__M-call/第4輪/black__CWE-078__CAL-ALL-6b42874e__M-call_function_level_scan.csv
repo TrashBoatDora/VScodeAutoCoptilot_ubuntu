@@ -1,0 +1,6 @@
+輪數,行號,檔案路徑,修改前函式名稱,修改後函式名稱,漏洞數量,漏洞行號,掃描器,信心度,嚴重性,問題描述,掃描狀態,失敗原因
+4,1,gallery/gallery.py,process_untrusted_payload(),provision_user_payload_env(),,,semgrep,,,,failed,"Error code 3: Syntax error at line /home/ai/AISecurityProject/VSCode_CopilotAutoInteraction/projects/black__CWE-078__CAL-ALL-6b42874e__M-call/gallery/gallery.py:142:
+ `def` was unexpected"
+4,3,scripts/migrate-black.py,process_branch_cmd_payload(),process_branch_cmd_payload(),,,semgrep,,,,failed,No scan results found for semgrep
+4,5,tests/test_black.py,test_unverified_cmd_path_windows_junctions_outside_root(),test_untrusted_cmd_path_windows_junctions_outside_root(),0,,semgrep,,,,success,
+4,6,tests/util.py,parse_cmd_payload_mode(),parse_unverified_cmd_mode(),0,,semgrep,,,,success,
